@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>/</loc>
+  </url>
+  <url>
+    <loc>/login</loc>
+  </url>
+  <url>
+    <loc>/dre</loc>
+  </url>
+  <url>
+    <loc>/receitas</loc>
+  </url>
+  <url>
+    <loc>/deducoes</loc>
+  </url>
+  <url>
+    <loc>/cmv</loc>
+  </url>
+  <url>
+    <loc>/gastos</loc>
+  </url>
+  <url>
+    <loc>/funcionarios</loc>
+  </url>
+  <url>
+    <loc>/plano-contas</loc>
+  </url>
+  <url>
+    <loc>/empresa</loc>
+  </url>
+  <url>
+    <loc>/admin</loc>
+  </url>
+</urlset>
+
