@@ -53,7 +53,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex bg-background">
       {/* Sidebar desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-        <SidebarContent path={path} />
+        <SidebarContent path={path} isAdmin={isAdmin} />
       </aside>
 
       {/* Sidebar mobile drawer */}
@@ -61,7 +61,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
           <aside className="relative w-64 bg-sidebar text-sidebar-foreground flex flex-col">
-            <SidebarContent path={path} onNavigate={() => setOpen(false)} />
+            <SidebarContent path={path} isAdmin={isAdmin} onNavigate={() => setOpen(false)} />
           </aside>
         </div>
       )}
@@ -128,9 +128,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SidebarContent({ path, onNavigate }: { path: string; onNavigate?: () => void }) {
+function SidebarContent({ path, isAdmin, onNavigate }: { path: string; isAdmin: boolean; onNavigate?: () => void }) {
   const company = useStore((s) => s.company);
-  const { isAdmin } = useIsPlatformAdmin();
   const nav = isAdmin
     ? [...baseNav, { to: "/admin", label: "Administrador", icon: Shield }]
     : [...baseNav];

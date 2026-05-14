@@ -301,6 +301,22 @@ function fromExpense(companyId: string, e: Expense): ExpenseRow {
 }
 
 export async function listMyCompanies(client: SupabaseClient): Promise<Array<{ companyId: string; role: UserCompanyRow["role"]; company: Company | null }>> {
+  // Platform admin can access all companies (app_admins table acts as the allowlist)
+  try {
+    const { data: adminRow, error: adminErr } = await client.from("app_admins").select("user_id").maybeSingle();
+    if (!adminErr && adminRow?.user_id) {
+      const { data: companies, error: companiesErr } = await client.from("companies").select("id,name,cnpj,address,logo_url");
+      if (companiesErr) throw companiesErr;
+      return (companies ?? []).map((row: any) => ({
+        companyId: String(row.id),
+        role: "admin" as UserCompanyRow["role"],
+        company: row ? toCompany(row as CompanyRow) : null,
+      }));
+    }
+  } catch {
+    // ignore and fallback to linked companies
+  }
+
   const { data, error } = await client
     .from("user_companies")
     .select("company_id,role,companies:company_id(id,name,cnpj,address,logo_url)");

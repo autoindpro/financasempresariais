@@ -48,6 +48,12 @@ language sql stable security definer set search_path = public as $$
   );
 $$;
 
+create or replace function public.is_platform_admin(_user_id uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.app_admins a where a.user_id = _user_id);
+$$;
+
 -- ----------------------- EMPLOYEES -----------------------
 create table public.employees (
   id uuid primary key default gen_random_uuid(),
@@ -185,6 +191,14 @@ create policy "company access read" on public.companies
 create policy "company read platform admin" on public.companies
   for select using (exists (select 1 from public.app_admins a where a.user_id = auth.uid()));
 
+-- Admin global pode editar/deletar qualquer empresa
+create policy "company write platform admin" on public.companies
+  for update using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
+create policy "company delete platform admin" on public.companies
+  for delete using (public.is_platform_admin(auth.uid()));
+
 -- Permite criar empresas (o vínculo em user_companies garante o acesso depois).
 create policy "company insert" on public.companies
   for insert with check (auth.uid() is not null);
@@ -204,6 +218,11 @@ create policy "user_companies self read" on public.user_companies
 create policy "user_companies self insert" on public.user_companies
   for insert with check (user_id = auth.uid());
 
+-- Admin global pode gerenciar vínculos (para dar acesso a outras pessoas)
+create policy "user_companies platform admin" on public.user_companies
+  for all using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
 -- app_admins: cada admin pode ver a própria linha; (inserção é feita manualmente no painel/SQL)
 create policy "app_admins self read" on public.app_admins
   for select using (user_id = auth.uid());
@@ -213,30 +232,62 @@ create policy "rev access" on public.revenues for all
   using (public.has_company_access(auth.uid(), company_id))
   with check (public.has_company_access(auth.uid(), company_id));
 
+create policy "rev platform admin" on public.revenues for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
 create policy "ded access" on public.deductions for all
   using (public.has_company_access(auth.uid(), company_id))
   with check (public.has_company_access(auth.uid(), company_id));
+
+create policy "ded platform admin" on public.deductions for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
 
 create policy "cmv access" on public.cmv_cpv_csp for all
   using (public.has_company_access(auth.uid(), company_id))
   with check (public.has_company_access(auth.uid(), company_id));
 
+create policy "cmv platform admin" on public.cmv_cpv_csp for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
 create policy "exp access" on public.operational_expenses for all
   using (public.has_company_access(auth.uid(), company_id))
   with check (public.has_company_access(auth.uid(), company_id));
+
+create policy "exp platform admin" on public.operational_expenses for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
 
 create policy "emp access" on public.employees for all
   using (public.has_company_access(auth.uid(), company_id))
   with check (public.has_company_access(auth.uid(), company_id));
 
+create policy "emp platform admin" on public.employees for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
 create policy "coa access" on public.chart_of_accounts for all
   using (public.has_company_access(auth.uid(), company_id))
   with check (public.has_company_access(auth.uid(), company_id));
+
+create policy "coa platform admin" on public.chart_of_accounts for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
 
 create policy "dre access" on public.dre_results for all
   using (public.has_company_access(auth.uid(), company_id))
   with check (public.has_company_access(auth.uid(), company_id));
 
+create policy "dre platform admin" on public.dre_results for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
 create policy "snap access" on public.dashboard_snapshots for all
   using (public.has_company_access(auth.uid(), company_id))
   with check (public.has_company_access(auth.uid(), company_id));
+
+create policy "snap platform admin" on public.dashboard_snapshots for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));

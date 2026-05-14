@@ -169,6 +169,12 @@ language sql stable security definer set search_path = public as $$
   );
 $$;
 
+create or replace function public.is_platform_admin(_user_id uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.app_admins a where a.user_id = _user_id);
+$$;
+
 -- ----------------------- ALTERs (adicionar colunas faltantes) -----------------------
 -- Companies
 alter table public.companies add column if not exists cnpj text;
@@ -337,6 +343,12 @@ begin
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='companies' and policyname='company read platform admin') then
     execute $sql$create policy "company read platform admin" on public.companies for select using (exists (select 1 from public.app_admins a where a.user_id = auth.uid()))$sql$;
   end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='companies' and policyname='company write platform admin') then
+    execute $sql$create policy "company write platform admin" on public.companies for update using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='companies' and policyname='company delete platform admin') then
+    execute $sql$create policy "company delete platform admin" on public.companies for delete using (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='companies' and policyname='company insert') then
     execute $sql$create policy "company insert" on public.companies for insert with check (auth.uid() is not null)$sql$;
   end if;
@@ -354,6 +366,9 @@ begin
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='user_companies' and policyname='user_companies self insert') then
     execute $sql$create policy "user_companies self insert" on public.user_companies for insert with check (user_id = auth.uid())$sql$;
   end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='user_companies' and policyname='user_companies platform admin') then
+    execute $sql$create policy "user_companies platform admin" on public.user_companies for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
 
   -- app_admins
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='app_admins' and policyname='app_admins self read') then
@@ -364,25 +379,49 @@ begin
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='revenues' and policyname='rev access') then
     execute $sql$create policy "rev access" on public.revenues for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
   end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='revenues' and policyname='rev platform admin') then
+    execute $sql$create policy "rev platform admin" on public.revenues for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='deductions' and policyname='ded access') then
     execute $sql$create policy "ded access" on public.deductions for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='deductions' and policyname='ded platform admin') then
+    execute $sql$create policy "ded platform admin" on public.deductions for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
   end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='cmv_cpv_csp' and policyname='cmv access') then
     execute $sql$create policy "cmv access" on public.cmv_cpv_csp for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
   end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='cmv_cpv_csp' and policyname='cmv platform admin') then
+    execute $sql$create policy "cmv platform admin" on public.cmv_cpv_csp for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='operational_expenses' and policyname='exp access') then
     execute $sql$create policy "exp access" on public.operational_expenses for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='operational_expenses' and policyname='exp platform admin') then
+    execute $sql$create policy "exp platform admin" on public.operational_expenses for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
   end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='employees' and policyname='emp access') then
     execute $sql$create policy "emp access" on public.employees for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
   end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='employees' and policyname='emp platform admin') then
+    execute $sql$create policy "emp platform admin" on public.employees for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='chart_of_accounts' and policyname='coa access') then
     execute $sql$create policy "coa access" on public.chart_of_accounts for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='chart_of_accounts' and policyname='coa platform admin') then
+    execute $sql$create policy "coa platform admin" on public.chart_of_accounts for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
   end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='dre_results' and policyname='dre access') then
     execute $sql$create policy "dre access" on public.dre_results for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
   end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='dre_results' and policyname='dre platform admin') then
+    execute $sql$create policy "dre platform admin" on public.dre_results for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='dashboard_snapshots' and policyname='snap access') then
     execute $sql$create policy "snap access" on public.dashboard_snapshots for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='dashboard_snapshots' and policyname='snap platform admin') then
+    execute $sql$create policy "snap platform admin" on public.dashboard_snapshots for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
   end if;
 end $policies$;
