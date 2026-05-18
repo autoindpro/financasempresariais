@@ -6,6 +6,7 @@ import {
   Receipt,
   Package,
   Wallet,
+  Landmark,
   Users,
   BookOpen,
   Building2,
@@ -27,6 +28,7 @@ const baseNav = [
   { to: "/deducoes", label: "Deduções", icon: Receipt },
   { to: "/cmv", label: "CMV", icon: Package },
   { to: "/gastos", label: "Gastos Operacionais", icon: Wallet },
+  { to: "/fluxo-caixa", label: "Fluxo de Caixa", icon: Landmark },
   { to: "/funcionarios", label: "Funcionários", icon: Users },
   { to: "/plano-contas", label: "Plano de Contas", icon: BookOpen },
   { to: "/empresa", label: "Perfil da Empresa", icon: Building2 },
@@ -77,7 +79,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex-1">
             <h1 className="text-sm font-medium text-muted-foreground">
-              {nav.find((n) => n.to === path)?.label ?? "DRE Gerencial"}
+              {nav.find((n) => n.to === path)?.label ?? "Gestão Empresarial"}
             </h1>
           </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -128,7 +130,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SidebarContent({ path, isAdmin, onNavigate }: { path: string; isAdmin: boolean; onNavigate?: () => void }) {
+function SidebarContent({
+  path,
+  isAdmin,
+  onNavigate,
+}: {
+  path: string;
+  isAdmin: boolean;
+  onNavigate?: () => void;
+}) {
   const company = useStore((s) => s.company);
   const nav = isAdmin
     ? [...baseNav, { to: "/admin", label: "Administrador", icon: Shield }]
@@ -153,7 +163,7 @@ function SidebarContent({ path, isAdmin, onNavigate }: { path: string; isAdmin: 
               {company.name || "Finanças Empresariais"}
             </div>
             <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">
-              DRE Gerencial
+              Gestão Empresarial
             </div>
           </div>
         </div>

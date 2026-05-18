@@ -14,6 +14,7 @@ import { Route as PlanoContasRouteImport } from './routes/plano-contas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GastosRouteImport } from './routes/gastos'
 import { Route as FuncionariosRouteImport } from './routes/funcionarios'
+import { Route as FluxoCaixaRouteImport } from './routes/fluxo-caixa'
 import { Route as EmpresaRouteImport } from './routes/empresa'
 import { Route as DreRouteImport } from './routes/dre'
 import { Route as DeducoesRouteImport } from './routes/deducoes'
@@ -45,6 +46,11 @@ const GastosRoute = GastosRouteImport.update({
 const FuncionariosRoute = FuncionariosRouteImport.update({
   id: '/funcionarios',
   path: '/funcionarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FluxoCaixaRoute = FluxoCaixaRouteImport.update({
+  id: '/fluxo-caixa',
+  path: '/fluxo-caixa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmpresaRoute = EmpresaRouteImport.update({
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/deducoes': typeof DeducoesRoute
   '/dre': typeof DreRoute
   '/empresa': typeof EmpresaRoute
+  '/fluxo-caixa': typeof FluxoCaixaRoute
   '/funcionarios': typeof FuncionariosRoute
   '/gastos': typeof GastosRoute
   '/login': typeof LoginRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/deducoes': typeof DeducoesRoute
   '/dre': typeof DreRoute
   '/empresa': typeof EmpresaRoute
+  '/fluxo-caixa': typeof FluxoCaixaRoute
   '/funcionarios': typeof FuncionariosRoute
   '/gastos': typeof GastosRoute
   '/login': typeof LoginRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/deducoes': typeof DeducoesRoute
   '/dre': typeof DreRoute
   '/empresa': typeof EmpresaRoute
+  '/fluxo-caixa': typeof FluxoCaixaRoute
   '/funcionarios': typeof FuncionariosRoute
   '/gastos': typeof GastosRoute
   '/login': typeof LoginRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/deducoes'
     | '/dre'
     | '/empresa'
+    | '/fluxo-caixa'
     | '/funcionarios'
     | '/gastos'
     | '/login'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/deducoes'
     | '/dre'
     | '/empresa'
+    | '/fluxo-caixa'
     | '/funcionarios'
     | '/gastos'
     | '/login'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/deducoes'
     | '/dre'
     | '/empresa'
+    | '/fluxo-caixa'
     | '/funcionarios'
     | '/gastos'
     | '/login'
@@ -179,6 +191,7 @@ export interface RootRouteChildren {
   DeducoesRoute: typeof DeducoesRoute
   DreRoute: typeof DreRoute
   EmpresaRoute: typeof EmpresaRoute
+  FluxoCaixaRoute: typeof FluxoCaixaRoute
   FuncionariosRoute: typeof FuncionariosRoute
   GastosRoute: typeof GastosRoute
   LoginRoute: typeof LoginRoute
@@ -221,6 +234,13 @@ declare module '@tanstack/react-router' {
       path: '/funcionarios'
       fullPath: '/funcionarios'
       preLoaderRoute: typeof FuncionariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fluxo-caixa': {
+      id: '/fluxo-caixa'
+      path: '/fluxo-caixa'
+      fullPath: '/fluxo-caixa'
+      preLoaderRoute: typeof FluxoCaixaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/empresa': {
@@ -283,6 +303,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeducoesRoute: DeducoesRoute,
   DreRoute: DreRoute,
   EmpresaRoute: EmpresaRoute,
+  FluxoCaixaRoute: FluxoCaixaRoute,
   FuncionariosRoute: FuncionariosRoute,
   GastosRoute: GastosRoute,
   LoginRoute: LoginRoute,

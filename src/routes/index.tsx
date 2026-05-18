@@ -34,7 +34,7 @@ function Dashboard() {
   );
 
   const compGastos = [
-    { name: "CMV/CPV/CSP", value: dre.cmvTotal },
+    { name: "CMV", value: dre.cmvTotal },
     { name: "Folha", value: dre.folhaTotal },
     { name: "Gastos Operacionais", value: Math.max(0, dre.gastosTotal - dre.folhaTotal) },
     { name: "Deduções", value: dre.deducoesTotal },

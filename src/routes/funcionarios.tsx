@@ -18,7 +18,7 @@ function FuncPage() {
   const { employees, addEmployee, updateEmployee, removeEmployee, options, addOption } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const blank = { name: "", cpf: "", role: "", admissionDate: new Date().toISOString().slice(0, 10), salary: 0, inssRate: 8, fgtsRate: 8 };
+  const blank = { name: "", cpf: "", role: "", admissionDate: new Date().toISOString().slice(0, 10), salary: 0, inssRate: 7.5, fgtsRate: 8 };
   const [form, setForm] = useState(blank);
 
   const totals = employees.reduce(

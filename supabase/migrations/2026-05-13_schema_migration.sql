@@ -28,6 +28,12 @@ begin
   if not exists (select 1 from pg_type where typname = 'app_role') then
     execute $sql$create type app_role as enum ('admin','manager','viewer')$sql$;
   end if;
+  if not exists (select 1 from pg_type where typname = 'cashflow_entry_kind') then
+    execute $sql$create type cashflow_entry_kind as enum ('payable','receivable')$sql$;
+  end if;
+  if not exists (select 1 from pg_type where typname = 'cashflow_entry_status') then
+    execute $sql$create type cashflow_entry_status as enum ('open','paid','canceled')$sql$;
+  end if;
 end $enum$;
 
 -- ----------------------- TABELAS (create-if-missing) -----------------------
@@ -159,6 +165,52 @@ create table if not exists public.dashboard_snapshots (
   created_at timestamptz default now()
 );
 
+-- ----------------------- CASHFLOW / BANKING -----------------------
+create table if not exists public.bank_accounts (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete cascade,
+  name text not null,
+  bank_name text,
+  account_number text,
+  currency char(3) not null default 'BRL',
+  opening_balance numeric(14,2) not null default 0,
+  active boolean not null default true,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.bank_transactions (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete cascade,
+  bank_account_id uuid not null references public.bank_accounts(id) on delete cascade,
+  fit_id text,
+  posted_at date not null,
+  amount numeric(14,2) not null,
+  name text,
+  memo text,
+  check_num text,
+  raw jsonb,
+  created_at timestamptz default now(),
+  unique (bank_account_id, fit_id)
+);
+
+create table if not exists public.cashflow_entries (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete cascade,
+  kind cashflow_entry_kind not null,
+  status cashflow_entry_status not null default 'open',
+  competence char(7) not null,
+  due_date date not null,
+  paid_at date,
+  description text not null,
+  counterparty text,
+  account text,
+  amount numeric(14,2) not null,
+  recurrent boolean not null default false,
+  frequency expense_frequency not null default 'Mensal',
+  notes text,
+  created_at timestamptz default now()
+);
+
 -- ----------------------- FUNÇÕES -----------------------
 create or replace function public.has_company_access(_user_id uuid, _company_id uuid)
 returns boolean
@@ -240,11 +292,40 @@ alter table public.dre_results add column if not exists generated_at timestamptz
 -- dashboard_snapshots
 alter table public.dashboard_snapshots add column if not exists created_at timestamptz default now();
 
+-- bank_accounts
+alter table public.bank_accounts add column if not exists bank_name text;
+alter table public.bank_accounts add column if not exists account_number text;
+alter table public.bank_accounts add column if not exists currency char(3) not null default 'BRL';
+alter table public.bank_accounts add column if not exists opening_balance numeric(14,2) not null default 0;
+alter table public.bank_accounts add column if not exists active boolean not null default true;
+alter table public.bank_accounts add column if not exists created_at timestamptz default now();
+
+-- bank_transactions
+alter table public.bank_transactions add column if not exists fit_id text;
+alter table public.bank_transactions add column if not exists name text;
+alter table public.bank_transactions add column if not exists memo text;
+alter table public.bank_transactions add column if not exists check_num text;
+alter table public.bank_transactions add column if not exists raw jsonb;
+alter table public.bank_transactions add column if not exists created_at timestamptz default now();
+
+-- cashflow_entries
+alter table public.cashflow_entries add column if not exists status cashflow_entry_status not null default 'open';
+alter table public.cashflow_entries add column if not exists paid_at date;
+alter table public.cashflow_entries add column if not exists counterparty text;
+alter table public.cashflow_entries add column if not exists account text;
+alter table public.cashflow_entries add column if not exists recurrent boolean not null default false;
+alter table public.cashflow_entries add column if not exists frequency expense_frequency not null default 'Mensal';
+alter table public.cashflow_entries add column if not exists notes text;
+alter table public.cashflow_entries add column if not exists created_at timestamptz default now();
+
 -- ----------------------- INDEXES -----------------------
 create index if not exists revenues_company_competence_idx on public.revenues (company_id, competence);
 create index if not exists deductions_company_competence_idx on public.deductions (company_id, competence);
 create index if not exists cmv_company_competence_idx on public.cmv_cpv_csp (company_id, competence);
 create index if not exists operational_expenses_company_competence_idx on public.operational_expenses (company_id, competence);
+create index if not exists bank_accounts_company_idx on public.bank_accounts (company_id);
+create index if not exists bank_tx_company_posted_idx on public.bank_transactions (company_id, posted_at);
+create index if not exists cashflow_company_due_idx on public.cashflow_entries (company_id, due_date);
 
 -- ----------------------- ALTER TYPEs (tentar alinhar tipos, sem quebrar execução) -----------------------
 -- Algumas instâncias antigas podem ter colunas como TEXT. Tentamos converter para os ENUM/DATE atuais.
@@ -332,6 +413,9 @@ alter table public.cmv_cpv_csp enable row level security;
 alter table public.operational_expenses enable row level security;
 alter table public.dre_results enable row level security;
 alter table public.dashboard_snapshots enable row level security;
+alter table public.bank_accounts enable row level security;
+alter table public.bank_transactions enable row level security;
+alter table public.cashflow_entries enable row level security;
 
 -- ----------------------- POLICIES (create-if-missing) -----------------------
 do $policies$
@@ -423,5 +507,27 @@ begin
   end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='dashboard_snapshots' and policyname='snap platform admin') then
     execute $sql$create policy "snap platform admin" on public.dashboard_snapshots for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
+
+  -- cashflow / banking
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='bank_accounts' and policyname='bank_accounts access') then
+    execute $sql$create policy "bank_accounts access" on public.bank_accounts for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='bank_accounts' and policyname='bank_accounts platform admin') then
+    execute $sql$create policy "bank_accounts platform admin" on public.bank_accounts for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='bank_transactions' and policyname='bank_tx access') then
+    execute $sql$create policy "bank_tx access" on public.bank_transactions for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='bank_transactions' and policyname='bank_tx platform admin') then
+    execute $sql$create policy "bank_tx platform admin" on public.bank_transactions for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='cashflow_entries' and policyname='cashflow access') then
+    execute $sql$create policy "cashflow access" on public.cashflow_entries for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='cashflow_entries' and policyname='cashflow platform admin') then
+    execute $sql$create policy "cashflow platform admin" on public.cashflow_entries for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
   end if;
 end $policies$;

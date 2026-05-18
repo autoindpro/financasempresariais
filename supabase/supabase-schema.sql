@@ -14,6 +14,10 @@ create type cmv_type as enum ('CMV','CPV','CSP');
 create type expense_frequency as enum ('Mensal','Trimestral','Anual','Eventual');
 create type app_role as enum ('admin','manager','viewer');
 
+-- Cashflow
+create type cashflow_entry_kind as enum ('payable','receivable');
+create type cashflow_entry_status as enum ('open','paid','canceled');
+
 -- ----------------------- PLATFORM ADMINS -----------------------
 -- Usuários com permissão global para visualizar dados de todas as empresas.
 create table public.app_admins (
@@ -170,6 +174,55 @@ create table public.dashboard_snapshots (
   created_at timestamptz default now()
 );
 
+-- ----------------------- CASHFLOW / BANKING -----------------------
+create table public.bank_accounts (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete cascade,
+  name text not null,
+  bank_name text,
+  account_number text,
+  currency char(3) not null default 'BRL',
+  opening_balance numeric(14,2) not null default 0,
+  active boolean not null default true,
+  created_at timestamptz default now()
+);
+create index on public.bank_accounts (company_id);
+
+create table public.bank_transactions (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete cascade,
+  bank_account_id uuid not null references public.bank_accounts(id) on delete cascade,
+  fit_id text, -- OFX FITID (not always present)
+  posted_at date not null,
+  amount numeric(14,2) not null,
+  name text,
+  memo text,
+  check_num text,
+  raw jsonb, -- original OFX chunk (best-effort)
+  created_at timestamptz default now(),
+  unique (bank_account_id, fit_id)
+);
+create index on public.bank_transactions (company_id, posted_at);
+
+create table public.cashflow_entries (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete cascade,
+  kind cashflow_entry_kind not null,
+  status cashflow_entry_status not null default 'open',
+  competence char(7) not null,
+  due_date date not null,
+  paid_at date,
+  description text not null,
+  counterparty text,
+  account text, -- optional link to chart_of_accounts.name
+  amount numeric(14,2) not null,
+  recurrent boolean not null default false,
+  frequency expense_frequency not null default 'Mensal',
+  notes text,
+  created_at timestamptz default now()
+);
+create index on public.cashflow_entries (company_id, due_date);
+
 -- ----------------------- RLS POLICIES -----------------------
 alter table public.companies enable row level security;
 alter table public.user_companies enable row level security;
@@ -182,6 +235,9 @@ alter table public.cmv_cpv_csp enable row level security;
 alter table public.operational_expenses enable row level security;
 alter table public.dre_results enable row level security;
 alter table public.dashboard_snapshots enable row level security;
+alter table public.bank_accounts enable row level security;
+alter table public.bank_transactions enable row level security;
+alter table public.cashflow_entries enable row level security;
 
 -- Acesso por vínculo na tabela user_companies
 create policy "company access read" on public.companies
@@ -287,6 +343,31 @@ create policy "dre platform admin" on public.dre_results for all
 create policy "snap access" on public.dashboard_snapshots for all
   using (public.has_company_access(auth.uid(), company_id))
   with check (public.has_company_access(auth.uid(), company_id));
+
+create policy "bank_accounts access" on public.bank_accounts for all
+  using (public.has_company_access(auth.uid(), company_id))
+  with check (public.has_company_access(auth.uid(), company_id));
+
+create policy "bank_tx access" on public.bank_transactions for all
+  using (public.has_company_access(auth.uid(), company_id))
+  with check (public.has_company_access(auth.uid(), company_id));
+
+create policy "cashflow access" on public.cashflow_entries for all
+  using (public.has_company_access(auth.uid(), company_id))
+  with check (public.has_company_access(auth.uid(), company_id));
+
+-- Platform admin full access
+create policy "bank_accounts platform admin" on public.bank_accounts for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
+create policy "bank_tx platform admin" on public.bank_transactions for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
+create policy "cashflow platform admin" on public.cashflow_entries for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
 
 create policy "snap platform admin" on public.dashboard_snapshots for all
   using (public.is_platform_admin(auth.uid()))

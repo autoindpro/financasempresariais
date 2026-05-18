@@ -361,17 +361,33 @@ export async function pullAllCompanyData(client: SupabaseClient, companyId: stri
   cmv: CmvEntry[];
   expenses: Expense[];
 }> {
-  const [companyRes, employeesRes, accountsRes, revenuesRes, deductionsRes, cmvRes, expensesRes] = await Promise.all([
+  const [companyRes, employeesRes, accountsRes, revenuesRes, deductionsRes, cmvRes] = await Promise.all([
     client.from("companies").select("id,name,cnpj,address,logo_url").eq("id", companyId).maybeSingle(),
     client.from("employees").select("*").eq("company_id", companyId),
     client.from("chart_of_accounts").select("*").eq("company_id", companyId),
     client.from("revenues").select("*").eq("company_id", companyId),
     client.from("deductions").select("*").eq("company_id", companyId),
     client.from("cmv_cpv_csp").select("*").eq("company_id", companyId),
-    client.from("operational_expenses").select("*").eq("company_id", companyId),
   ]);
 
-  for (const res of [companyRes, employeesRes, accountsRes, revenuesRes, deductionsRes, cmvRes, expensesRes]) {
+  const expenses: any[] = [];
+  // Be generous: paginate operational expenses to avoid truncation when the dataset grows.
+  // PostgREST uses range-based pagination. We stop when a page returns fewer rows than pageSize.
+  const pageSize = 1000;
+  for (let offset = 0; offset < 50000; offset += pageSize) {
+    const res = await client
+      .from("operational_expenses")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (res.error) throw res.error;
+    const rows = res.data ?? [];
+    expenses.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+
+  for (const res of [companyRes, employeesRes, accountsRes, revenuesRes, deductionsRes, cmvRes]) {
     if (res.error) throw res.error;
   }
 
@@ -382,7 +398,7 @@ export async function pullAllCompanyData(client: SupabaseClient, companyId: stri
     revenues: (revenuesRes.data ?? []).map((r) => toRevenue(r as RevenueRow)),
     deductions: (deductionsRes.data ?? []).map((r) => toDeduction(r as DeductionRow)),
     cmv: (cmvRes.data ?? []).map((r) => toCmv(r as CmvRow)),
-    expenses: (expensesRes.data ?? []).map((r) => toExpense(r as ExpenseRow)),
+    expenses: (expenses ?? []).map((r) => toExpense(r as ExpenseRow)),
   };
 }
 
