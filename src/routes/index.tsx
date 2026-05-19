@@ -3,7 +3,7 @@ import { useStore } from "@/lib/store";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
-import { buildDre, fmt, lastNMonths, currentCompetence } from "@/lib/finance";
+import { buildDre, fmt, currentCompetence } from "@/lib/finance";
 import { TrendingUp, DollarSign, Percent, Activity, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, PieChart, Pie, Cell, Legend } from "recharts";
 import { useMemo, useState } from "react";
@@ -17,7 +17,8 @@ function Dashboard() {
   const s = useStore();
   const [competence, setCompetence] = useState<string>(currentCompetence());
   const dre = useMemo(() => buildDre({ ...s, competence }), [s, competence]);
-  const months = lastNMonths(6);
+  const year = competence.slice(0, 4);
+  const months = useMemo(() => Array.from({ length: 12 }, (_v, i) => `${year}-${String(i + 1).padStart(2, "0")}`), [year]);
 
   const series = useMemo(
     () =>
@@ -98,7 +99,7 @@ function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold font-display">Evolução Financeira</h3>
-              <p className="text-xs text-muted-foreground">Últimos 6 meses</p>
+              <p className="text-xs text-muted-foreground">Ano {year}</p>
             </div>
           </div>
           <div className="h-72">

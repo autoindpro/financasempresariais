@@ -59,9 +59,9 @@ function FluxoCaixaPage() {
 
   const [entriesStatus, setEntriesStatus] = useState<string>("");
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [entryTypeFilter, setEntryTypeFilter] = useState<"all" | "payable" | "receivable">("all");
-  const [entryDescriptionFilter, setEntryDescriptionFilter] = useState<string>("all");
-  const [entryCounterpartyFilter, setEntryCounterpartyFilter] = useState<string>("all");
+  const [entryTypeFilters, setEntryTypeFilters] = useState<Array<"payable" | "receivable">>([]);
+  const [entryDescriptionFilters, setEntryDescriptionFilters] = useState<string[]>([]);
+  const [entryCounterpartyFilters, setEntryCounterpartyFilters] = useState<string[]>([]);
   const [entries, setEntries] = useState<
     Array<{
       id: string;
@@ -160,11 +160,20 @@ function FluxoCaixaPage() {
 
   const filteredEntries = useMemo(() => {
     let out = entries.filter((e) => isDateInDashPeriod(e.dueDate));
-    if (entryTypeFilter !== "all") out = out.filter((e) => e.kind === entryTypeFilter);
-    if (entryDescriptionFilter !== "all") out = out.filter((e) => e.description === entryDescriptionFilter);
-    if (entryCounterpartyFilter !== "all") out = out.filter((e) => (e.counterparty ?? "") === entryCounterpartyFilter);
+    if (entryTypeFilters.length) {
+      const set = new Set(entryTypeFilters);
+      out = out.filter((e) => set.has(e.kind));
+    }
+    if (entryDescriptionFilters.length) {
+      const set = new Set(entryDescriptionFilters);
+      out = out.filter((e) => set.has(e.description));
+    }
+    if (entryCounterpartyFilters.length) {
+      const set = new Set(entryCounterpartyFilters);
+      out = out.filter((e) => set.has(e.counterparty ?? ""));
+    }
     return out;
-  }, [entries, entryCounterpartyFilter, entryDescriptionFilter, entryTypeFilter, currentDashRange]);
+  }, [entries, entryCounterpartyFilters, entryDescriptionFilters, entryTypeFilters, currentDashRange]);
 
   const dashFiltered = useMemo(() => {
     if (!dash) return null;
@@ -456,23 +465,28 @@ function FluxoCaixaPage() {
     if ((data?.length ?? 0) >= maxRows) {
       setEntriesStatus(`Mostrando os ${maxRows} lançamentos mais recentes do período. Refine o filtro se necessário.`);
     }
-    // Reset description filter if it no longer exists for the selected competence
-    if (entryDescriptionFilter !== "all") {
+    // Reset multi-filters if they no longer exist for the selected period
+    if (entryDescriptionFilters.length) {
       const nextOptions = new Set<string>();
       for (const r of data ?? []) {
         const d = String((r as any).description ?? "").trim();
         if (d) nextOptions.add(d);
       }
-      if (!nextOptions.has(entryDescriptionFilter)) setEntryDescriptionFilter("all");
+      setEntryDescriptionFilters((prev) => prev.filter((x) => nextOptions.has(x)));
     }
-    if (entryCounterpartyFilter !== "all") {
+    if (entryCounterpartyFilters.length) {
       const nextOptions = new Set<string>();
       for (const r of data ?? []) {
         const c = String((r as any).counterparty ?? "").trim();
         if (c) nextOptions.add(c);
       }
-      if (!nextOptions.has(entryCounterpartyFilter)) setEntryCounterpartyFilter("all");
+      setEntryCounterpartyFilters((prev) => prev.filter((x) => nextOptions.has(x)));
     }
+  };
+
+  const toggleInList = <T,>(arr: T[], value: T): T[] => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (arr as any).includes(value) ? (arr as any).filter((x: any) => x !== value) : [...arr, value];
   };
 
   const createEntry = async () => {
@@ -973,45 +987,82 @@ function FluxoCaixaPage() {
               <Button variant="secondary" onClick={() => void loadEntries()}>Atualizar lista</Button>
               {entriesStatus ? <div className="text-sm text-muted-foreground">{entriesStatus}</div> : null}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground whitespace-nowrap">Filtrar por tipo:</div>
-                <Select value={entryTypeFilter} onChange={(e) => setEntryTypeFilter(e.target.value as any)} className="max-w-[220px] w-full">
-                  <option value="all">Todos</option>
-                  <option value="payable">A pagar</option>
-                  <option value="receivable">A receber</option>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground whitespace-nowrap">Filtrar por Descrição:</div>
-                <Select
-                  value={entryDescriptionFilter}
-                  onChange={(e) => setEntryDescriptionFilter(e.target.value)}
-                  className="max-w-[340px] w-full"
-                >
-                  <option value="all">Todos</option>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <details className="rounded-xl border bg-background p-3">
+                <summary className="cursor-pointer text-sm font-medium select-none">
+                  Tipo {entryTypeFilters.length ? `(${entryTypeFilters.length})` : ""}
+                </summary>
+                <div className="mt-3 space-y-2 max-h-64 overflow-auto pr-1">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={entryTypeFilters.length === 0} onChange={() => setEntryTypeFilters([])} />
+                    Todos
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={entryTypeFilters.includes("payable")}
+                      onChange={() => setEntryTypeFilters((s) => toggleInList(s, "payable"))}
+                    />
+                    A pagar
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={entryTypeFilters.includes("receivable")}
+                      onChange={() => setEntryTypeFilters((s) => toggleInList(s, "receivable"))}
+                    />
+                    A receber
+                  </label>
+                </div>
+              </details>
+
+              <details className="rounded-xl border bg-background p-3">
+                <summary className="cursor-pointer text-sm font-medium select-none">
+                  Descrição {entryDescriptionFilters.length ? `(${entryDescriptionFilters.length})` : ""}
+                </summary>
+                <div className="mt-3 space-y-2 max-h-64 overflow-auto pr-1">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={entryDescriptionFilters.length === 0} onChange={() => setEntryDescriptionFilters([])} />
+                    Todos
+                  </label>
                   {descriptionOptions.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
+                    <label key={d} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={entryDescriptionFilters.includes(d)}
+                        onChange={() => setEntryDescriptionFilters((s) => toggleInList(s, d))}
+                      />
+                      <span className="truncate">{d}</span>
+                    </label>
                   ))}
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground whitespace-nowrap">Cliente/Fornecedor:</div>
-                <Select
-                  value={entryCounterpartyFilter}
-                  onChange={(e) => setEntryCounterpartyFilter(e.target.value)}
-                  className="max-w-[340px] w-full"
-                >
-                  <option value="all">Todos</option>
+                </div>
+              </details>
+
+              <details className="rounded-xl border bg-background p-3">
+                <summary className="cursor-pointer text-sm font-medium select-none">
+                  Cliente/Fornecedor {entryCounterpartyFilters.length ? `(${entryCounterpartyFilters.length})` : ""}
+                </summary>
+                <div className="mt-3 space-y-2 max-h-64 overflow-auto pr-1">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={entryCounterpartyFilters.length === 0}
+                      onChange={() => setEntryCounterpartyFilters([])}
+                    />
+                    Todos
+                  </label>
                   {counterpartyOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
+                    <label key={c} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={entryCounterpartyFilters.includes(c)}
+                        onChange={() => setEntryCounterpartyFilters((s) => toggleInList(s, c))}
+                      />
+                      <span className="truncate">{c}</span>
+                    </label>
                   ))}
-                </Select>
-              </div>
+                </div>
+              </details>
             </div>
             {filteredEntries.length > 0 && (
               <div className="rounded-xl border overflow-hidden">

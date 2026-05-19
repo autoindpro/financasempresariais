@@ -226,10 +226,15 @@ function GastosPage() {
     if (supabase) {
       // Delete by primary key. RLS already enforces company access, and adding a company_id filter
       // can cause "no-op" deletes if localStorage company_id is stale or the user is platform admin.
-      const { error } = await supabase.from("operational_expenses").delete().eq("id", id);
+      const { data, error } = await supabase.from("operational_expenses").delete().eq("id", id).select("id");
       if (error) {
         console.error("Supabase delete expense failed:", error);
         alert(`Não foi possível excluir no Supabase: ${error.message}`);
+        return;
+      }
+      if (!data || data.length === 0) {
+        console.warn("Supabase delete expense affected 0 rows", { id });
+        alert("Não foi possível excluir no Supabase (registro não encontrado). Recarregue a página e tente novamente.");
         return;
       }
     }

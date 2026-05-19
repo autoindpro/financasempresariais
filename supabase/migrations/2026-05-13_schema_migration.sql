@@ -165,6 +165,16 @@ create table if not exists public.dashboard_snapshots (
   created_at timestamptz default now()
 );
 
+-- ----------------------- APP OPTIONS (PER COMPANY) -----------------------
+create table if not exists public.option_values (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete cascade,
+  key text not null,
+  value text not null,
+  created_at timestamptz default now(),
+  unique (company_id, key, value)
+);
+
 -- ----------------------- CASHFLOW / BANKING -----------------------
 create table if not exists public.bank_accounts (
   id uuid primary key default gen_random_uuid(),
@@ -323,6 +333,7 @@ create index if not exists revenues_company_competence_idx on public.revenues (c
 create index if not exists deductions_company_competence_idx on public.deductions (company_id, competence);
 create index if not exists cmv_company_competence_idx on public.cmv_cpv_csp (company_id, competence);
 create index if not exists operational_expenses_company_competence_idx on public.operational_expenses (company_id, competence);
+create index if not exists option_values_company_key_idx on public.option_values (company_id, key);
 create index if not exists bank_accounts_company_idx on public.bank_accounts (company_id);
 create index if not exists bank_tx_company_posted_idx on public.bank_transactions (company_id, posted_at);
 create index if not exists cashflow_company_due_idx on public.cashflow_entries (company_id, due_date);
@@ -413,6 +424,7 @@ alter table public.cmv_cpv_csp enable row level security;
 alter table public.operational_expenses enable row level security;
 alter table public.dre_results enable row level security;
 alter table public.dashboard_snapshots enable row level security;
+alter table public.option_values enable row level security;
 alter table public.bank_accounts enable row level security;
 alter table public.bank_transactions enable row level security;
 alter table public.cashflow_entries enable row level security;
@@ -507,6 +519,14 @@ begin
   end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='dashboard_snapshots' and policyname='snap platform admin') then
     execute $sql$create policy "snap platform admin" on public.dashboard_snapshots for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
+  end if;
+
+  -- option_values
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='option_values' and policyname='options access') then
+    execute $sql$create policy "options access" on public.option_values for all using (public.has_company_access(auth.uid(), company_id)) with check (public.has_company_access(auth.uid(), company_id))$sql$;
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='option_values' and policyname='options platform admin') then
+    execute $sql$create policy "options platform admin" on public.option_values for all using (public.is_platform_admin(auth.uid())) with check (public.is_platform_admin(auth.uid()))$sql$;
   end if;
 
   -- cashflow / banking

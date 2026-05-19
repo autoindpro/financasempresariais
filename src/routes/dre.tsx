@@ -132,7 +132,16 @@ function DrePage() {
                 r.type,
                 r.channel,
                 <span className={`tabular-nums font-medium ${cls}`}>{`+ ${fmt(r.amount)}`}</span>,
-                r.notes ?? "",
+                r.notes ? (
+                  <div
+                    className="max-w-[520px] whitespace-pre-line break-words overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]"
+                    title={r.notes}
+                  >
+                    {r.notes}
+                  </div>
+                ) : (
+                  ""
+                ),
               ];
             })}
             emptyText="Nenhuma receita lançada neste mês."

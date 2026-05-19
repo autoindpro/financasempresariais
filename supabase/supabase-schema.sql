@@ -174,6 +174,18 @@ create table public.dashboard_snapshots (
   created_at timestamptz default now()
 );
 
+-- ----------------------- APP OPTIONS (PER COMPANY) -----------------------
+-- Stores user-defined dropdown values (e.g., "Tipo de Receita", "Canal") per company.
+create table public.option_values (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies(id) on delete cascade,
+  key text not null,
+  value text not null,
+  created_at timestamptz default now(),
+  unique (company_id, key, value)
+);
+create index on public.option_values (company_id, key);
+
 -- ----------------------- CASHFLOW / BANKING -----------------------
 create table public.bank_accounts (
   id uuid primary key default gen_random_uuid(),
@@ -235,6 +247,7 @@ alter table public.cmv_cpv_csp enable row level security;
 alter table public.operational_expenses enable row level security;
 alter table public.dre_results enable row level security;
 alter table public.dashboard_snapshots enable row level security;
+alter table public.option_values enable row level security;
 alter table public.bank_accounts enable row level security;
 alter table public.bank_transactions enable row level security;
 alter table public.cashflow_entries enable row level security;
@@ -370,5 +383,13 @@ create policy "cashflow platform admin" on public.cashflow_entries for all
   with check (public.is_platform_admin(auth.uid()));
 
 create policy "snap platform admin" on public.dashboard_snapshots for all
+  using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
+create policy "options access" on public.option_values for all
+  using (public.has_company_access(auth.uid(), company_id))
+  with check (public.has_company_access(auth.uid(), company_id));
+
+create policy "options platform admin" on public.option_values for all
   using (public.is_platform_admin(auth.uid()))
   with check (public.is_platform_admin(auth.uid()));

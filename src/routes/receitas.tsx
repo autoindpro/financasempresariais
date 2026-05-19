@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { fmt, currentCompetence } from "@/lib/finance";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { Button, Field, Input, Textarea, ComboInput } from "@/components/Form";
+import { addOptionValue, pullOptionValues } from "@/lib/supabase-options";
 
 export const Route = createFileRoute("/receitas")({
   component: ReceitasPage,
@@ -18,6 +19,14 @@ function ReceitasPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const thisMonth = currentCompetence();
+  const supabase = useMemo(() => getSupabase(), []);
+  const companyId = useMemo(() => {
+    try {
+      return localStorage.getItem("flux_company_id");
+    } catch {
+      return null;
+    }
+  }, []);
   const storedFilter = (() => {
     try {
       const companyId = localStorage.getItem("flux_company_id") ?? "default";
@@ -38,6 +47,26 @@ function ReceitasPage() {
       // ignore
     }
   }, [filterCompetence]);
+
+  useEffect(() => {
+    let alive = true;
+    async function run() {
+      try {
+        if (!supabase || !companyId) return;
+        const res = await pullOptionValues(supabase, companyId, ["revenueTypes", "channels"]);
+        if (!alive) return;
+        for (const v of res.revenueTypes ?? []) addOption("revenueTypes", v);
+        for (const v of res.channels ?? []) addOption("channels", v);
+      } catch (e) {
+        // keep app usable even if options table isn't deployed yet
+        console.warn("Failed to pull option_values:", e);
+      }
+    }
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [addOption, companyId, supabase]);
 
   const filteredRevenues = useMemo(
     () => revenues.filter((r) => r.competence === filterCompetence),
@@ -125,7 +154,14 @@ function ReceitasPage() {
                   <Td>{r.type}</Td>
                   <Td>{r.channel}</Td>
                   <Td align="right" className="tabular-nums font-medium">{fmt(r.amount)}</Td>
-                  <Td className="text-muted-foreground">{r.notes}</Td>
+                  <Td className="text-muted-foreground">
+                    <div
+                      className="max-w-[520px] whitespace-pre-line break-words overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]"
+                      title={r.notes ?? ""}
+                    >
+                      {r.notes}
+                    </div>
+                  </Td>
                   <Td align="right">
                     <RowActions onEdit={() => openEdit(r)} onDelete={() => void deleteRevenue(r.id)} />
                   </Td>
@@ -166,10 +202,34 @@ function ReceitasPage() {
               <Input type="number" step="0.01" value={form.amount || ""} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} />
             </Field>
             <Field label="Tipo de Receita">
-              <ComboInput value={form.type} onChange={(v) => setForm({ ...form, type: v })} options={options.revenueTypes} onAddOption={(v) => addOption("revenueTypes", v)} />
+              <ComboInput
+                value={form.type}
+                onChange={(v) => setForm({ ...form, type: v })}
+                options={options.revenueTypes}
+                onAddOption={(v) => {
+                  addOption("revenueTypes", v);
+                  if (supabase && companyId) {
+                    addOptionValue(supabase, companyId, "revenueTypes", v).catch((e) =>
+                      console.warn("Failed to persist option value:", e),
+                    );
+                  }
+                }}
+              />
             </Field>
             <Field label="Canal">
-              <ComboInput value={form.channel} onChange={(v) => setForm({ ...form, channel: v })} options={options.channels} onAddOption={(v) => addOption("channels", v)} />
+              <ComboInput
+                value={form.channel}
+                onChange={(v) => setForm({ ...form, channel: v })}
+                options={options.channels}
+                onAddOption={(v) => {
+                  addOption("channels", v);
+                  if (supabase && companyId) {
+                    addOptionValue(supabase, companyId, "channels", v).catch((e) =>
+                      console.warn("Failed to persist option value:", e),
+                    );
+                  }
+                }}
+              />
             </Field>
             <Field label="Observações" span={2}>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
