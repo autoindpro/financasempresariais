@@ -58,6 +58,44 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.app_admins a where a.user_id = _user_id);
 $$;
 
+-- Role helpers (viewer/manager/admin)
+create or replace function public.company_role(_user_id uuid, _company_id uuid)
+returns public.app_role
+language sql stable security definer set search_path = public as $$
+  select uc.role
+  from public.user_companies uc
+  where uc.user_id = _user_id and uc.company_id = _company_id
+  limit 1;
+$$;
+
+create or replace function public.has_company_role(_user_id uuid, _company_id uuid, _roles public.app_role[])
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1
+    from public.user_companies uc
+    where uc.user_id = _user_id
+      and uc.company_id = _company_id
+      and uc.role = any (_roles)
+  );
+$$;
+
+create or replace function public.can_company_write(_company_id uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select
+    public.is_platform_admin(auth.uid())
+    or public.has_company_role(auth.uid(), _company_id, array['manager','admin']::public.app_role[]);
+$$;
+
+create or replace function public.can_company_admin(_company_id uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select
+    public.is_platform_admin(auth.uid())
+    or public.has_company_role(auth.uid(), _company_id, array['admin']::public.app_role[]);
+$$;
+
 -- ----------------------- EMPLOYEES -----------------------
 create table public.employees (
   id uuid primary key default gen_random_uuid(),
@@ -268,24 +306,31 @@ create policy "company write platform admin" on public.companies
 create policy "company delete platform admin" on public.companies
   for delete using (public.is_platform_admin(auth.uid()));
 
--- Permite criar empresas (o vínculo em user_companies garante o acesso depois).
-create policy "company insert" on public.companies
-  for insert with check (auth.uid() is not null);
+-- Permite criar empresas apenas para admin da plataforma (gerenciamento é feito no Supabase).
+create policy "company insert platform admin" on public.companies
+  for insert with check (public.is_platform_admin(auth.uid()));
 
 -- Permite editar/deletar empresas apenas se o usuário tiver vínculo.
-create policy "company write" on public.companies
-  for update using (public.has_company_access(auth.uid(), id))
-  with check (public.has_company_access(auth.uid(), id));
+create policy "company write manager" on public.companies
+  for update using (public.can_company_write(id))
+  with check (public.can_company_write(id));
 
-create policy "company delete" on public.companies
-  for delete using (public.has_company_access(auth.uid(), id));
+create policy "company delete admin" on public.companies
+  for delete using (public.can_company_admin(id));
 
 create policy "user_companies self read" on public.user_companies
   for select using (user_id = auth.uid());
 
--- Permite o próprio usuário criar o vínculo (ex.: ao criar uma empresa)
-create policy "user_companies self insert" on public.user_companies
-  for insert with check (user_id = auth.uid());
+-- Vínculos são gerenciados pelo admin da plataforma
+create policy "user_companies insert platform admin" on public.user_companies
+  for insert with check (public.is_platform_admin(auth.uid()));
+
+create policy "user_companies update platform admin" on public.user_companies
+  for update using (public.is_platform_admin(auth.uid()))
+  with check (public.is_platform_admin(auth.uid()));
+
+create policy "user_companies delete platform admin" on public.user_companies
+  for delete using (public.is_platform_admin(auth.uid()));
 
 -- Admin global pode gerenciar vínculos (para dar acesso a outras pessoas)
 create policy "user_companies platform admin" on public.user_companies
@@ -296,100 +341,114 @@ create policy "user_companies platform admin" on public.user_companies
 create policy "app_admins self read" on public.app_admins
   for select using (user_id = auth.uid());
 
--- Política genérica reutilizada nas demais tabelas
-create policy "rev access" on public.revenues for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
+-- Políticas por papel:
+-- viewer: read-only
+-- manager/admin: read + write
 
-create policy "rev platform admin" on public.revenues for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
+create policy "rev read" on public.revenues
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "rev write" on public.revenues
+  for insert with check (public.can_company_write(company_id));
+create policy "rev update" on public.revenues
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "rev delete" on public.revenues
+  for delete using (public.can_company_write(company_id));
 
-create policy "ded access" on public.deductions for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
+create policy "ded read" on public.deductions
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "ded write" on public.deductions
+  for insert with check (public.can_company_write(company_id));
+create policy "ded update" on public.deductions
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "ded delete" on public.deductions
+  for delete using (public.can_company_write(company_id));
 
-create policy "ded platform admin" on public.deductions for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
+create policy "cmv read" on public.cmv_cpv_csp
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "cmv write" on public.cmv_cpv_csp
+  for insert with check (public.can_company_write(company_id));
+create policy "cmv update" on public.cmv_cpv_csp
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "cmv delete" on public.cmv_cpv_csp
+  for delete using (public.can_company_write(company_id));
 
-create policy "cmv access" on public.cmv_cpv_csp for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
+create policy "exp read" on public.operational_expenses
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "exp write" on public.operational_expenses
+  for insert with check (public.can_company_write(company_id));
+create policy "exp update" on public.operational_expenses
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "exp delete" on public.operational_expenses
+  for delete using (public.can_company_write(company_id));
 
-create policy "cmv platform admin" on public.cmv_cpv_csp for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
+create policy "emp read" on public.employees
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "emp write" on public.employees
+  for insert with check (public.can_company_write(company_id));
+create policy "emp update" on public.employees
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "emp delete" on public.employees
+  for delete using (public.can_company_write(company_id));
 
-create policy "exp access" on public.operational_expenses for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
+create policy "coa read" on public.chart_of_accounts
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "coa write" on public.chart_of_accounts
+  for insert with check (public.can_company_write(company_id));
+create policy "coa update" on public.chart_of_accounts
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "coa delete" on public.chart_of_accounts
+  for delete using (public.can_company_write(company_id));
 
-create policy "exp platform admin" on public.operational_expenses for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
+create policy "dre read" on public.dre_results
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "dre write" on public.dre_results
+  for insert with check (public.can_company_write(company_id));
+create policy "dre update" on public.dre_results
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "dre delete" on public.dre_results
+  for delete using (public.can_company_write(company_id));
 
-create policy "emp access" on public.employees for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
+create policy "snap read" on public.dashboard_snapshots
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "snap write" on public.dashboard_snapshots
+  for insert with check (public.can_company_write(company_id));
+create policy "snap update" on public.dashboard_snapshots
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "snap delete" on public.dashboard_snapshots
+  for delete using (public.can_company_write(company_id));
 
-create policy "emp platform admin" on public.employees for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
+create policy "bank_accounts read" on public.bank_accounts
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "bank_accounts write" on public.bank_accounts
+  for insert with check (public.can_company_write(company_id));
+create policy "bank_accounts update" on public.bank_accounts
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "bank_accounts delete" on public.bank_accounts
+  for delete using (public.can_company_write(company_id));
 
-create policy "coa access" on public.chart_of_accounts for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
+create policy "bank_tx read" on public.bank_transactions
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "bank_tx write" on public.bank_transactions
+  for insert with check (public.can_company_write(company_id));
+create policy "bank_tx update" on public.bank_transactions
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "bank_tx delete" on public.bank_transactions
+  for delete using (public.can_company_write(company_id));
 
-create policy "coa platform admin" on public.chart_of_accounts for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
+create policy "cashflow read" on public.cashflow_entries
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "cashflow write" on public.cashflow_entries
+  for insert with check (public.can_company_write(company_id));
+create policy "cashflow update" on public.cashflow_entries
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "cashflow delete" on public.cashflow_entries
+  for delete using (public.can_company_write(company_id));
 
-create policy "dre access" on public.dre_results for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
-
-create policy "dre platform admin" on public.dre_results for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
-
-create policy "snap access" on public.dashboard_snapshots for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
-
-create policy "bank_accounts access" on public.bank_accounts for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
-
-create policy "bank_tx access" on public.bank_transactions for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
-
-create policy "cashflow access" on public.cashflow_entries for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
-
--- Platform admin full access
-create policy "bank_accounts platform admin" on public.bank_accounts for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
-
-create policy "bank_tx platform admin" on public.bank_transactions for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
-
-create policy "cashflow platform admin" on public.cashflow_entries for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
-
-create policy "snap platform admin" on public.dashboard_snapshots for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
-
-create policy "options access" on public.option_values for all
-  using (public.has_company_access(auth.uid(), company_id))
-  with check (public.has_company_access(auth.uid(), company_id));
-
-create policy "options platform admin" on public.option_values for all
-  using (public.is_platform_admin(auth.uid()))
-  with check (public.is_platform_admin(auth.uid()));
+create policy "options read" on public.option_values
+  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+create policy "options write" on public.option_values
+  for insert with check (public.can_company_write(company_id));
+create policy "options update" on public.option_values
+  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+create policy "options delete" on public.option_values
+  for delete using (public.can_company_write(company_id));

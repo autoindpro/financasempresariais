@@ -8,6 +8,7 @@ import { schemaSql } from "@/lib/schema-sql";
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { createCompanyAndLink, listMyCompanies, pullAllCompanyData, pushAllCompanyData } from "@/lib/supabase-sync";
+import { useIsPlatformAdmin } from "@/lib/admin";
 
 export const Route = createFileRoute("/configuracoes")({
   component: SettingsPage,
@@ -18,6 +19,7 @@ function SettingsPage() {
   const { reset, company } = useStore();
   const supabase = useMemo(() => getSupabase(), []);
   const supabaseReady = isSupabaseConfigured();
+  const { isAdmin: isPlatformAdmin } = useIsPlatformAdmin();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -222,10 +224,15 @@ function SettingsPage() {
                           setBusy(false);
                         }
                       }}
-                      disabled={busy}
+                      disabled={busy || !isPlatformAdmin}
                     >
                       Criar empresa no Supabase
                     </Button>
+                    {!isPlatformAdmin ? (
+                      <div className="text-xs text-muted-foreground self-center">
+                        Somente administrador da plataforma pode criar empresas pelo app.
+                      </div>
+                    ) : null}
                     <Button
                       variant="ghost"
                       onClick={async () => {
