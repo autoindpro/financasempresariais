@@ -165,22 +165,22 @@ function SidebarContent({
     <>
       <div className="h-16 px-6 flex items-center justify-between border-b border-sidebar-border">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center overflow-hidden shrink-0">
-            {company.logo ? (
-              <img
-                src={company.logo}
-                alt={company.name || "Logo"}
-                className="h-full w-full object-cover"
-              />
-            ) : (
+          {company.logo ? (
+            <img
+              src={company.logo}
+              alt={company.name || "Logo"}
+              className="h-10 w-10 object-contain shrink-0"
+            />
+          ) : (
+            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center overflow-hidden shrink-0">
               <FileBarChart className="h-4 w-4 text-sidebar-primary-foreground" />
-            )}
-          </div>
+            </div>
+          )}
           <div className="min-w-0">
             <div className="text-sm font-bold leading-tight font-display truncate text-white">
               {company.name || "Finanças Empresariais"}
             </div>
-            <div className="text-[10px] text-white font-bold uppercase tracking-wider">
+            <div className="text-[10px] text-white font-medium uppercase tracking-wider">
               Finanças Empresariais
             </div>
           </div>
