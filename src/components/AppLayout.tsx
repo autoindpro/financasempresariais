@@ -177,10 +177,10 @@ function SidebarContent({
             )}
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold leading-tight font-display truncate">
+            <div className="text-sm font-bold leading-tight font-display truncate text-white">
               {company.name || "Finanças Empresariais"}
             </div>
-            <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">
+            <div className="text-[10px] text-white font-bold uppercase tracking-wider">
               Finanças Empresariais
             </div>
           </div>
@@ -201,10 +201,10 @@ function SidebarContent({
               to={item.to}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors text-white",
                 active
                   ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -214,7 +214,7 @@ function SidebarContent({
         })}
       </nav>
       <div className="p-4 border-t border-sidebar-border text-xs text-sidebar-foreground/60 text-center">
-        <div className="font-medium text-sidebar-foreground/90">Flux Soluções</div>
+        <div className="font-bold text-white">Flux Soluções</div>
       </div>
     </>
   );
