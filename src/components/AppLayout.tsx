@@ -84,7 +84,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex-1">
             <h1 className="text-sm font-medium text-muted-foreground">
-              {nav.find((n) => n.to === path)?.label ?? "Gestão Empresarial"}
+              {nav.find((n) => n.to === path)?.label ?? "Finanças Empresariais"}
             </h1>
           </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -181,7 +181,7 @@ function SidebarContent({
               {company.name || "Finanças Empresariais"}
             </div>
             <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">
-              Gestão Empresarial
+              Finanças Empresariais
             </div>
           </div>
         </div>
