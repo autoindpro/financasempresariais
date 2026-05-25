@@ -166,7 +166,7 @@ function SidebarContent({
       <div className="h-16 px-6 flex items-center justify-between border-b border-sidebar-border">
         <div className="flex items-center gap-2 min-w-0">
           {company.logo ? (
-            <div className="h-10 w-10 bg-white flex items-center justify-center overflow-hidden shrink-0">
+            <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center overflow-hidden shrink-0">
               <img
                 src={company.logo}
                 alt={company.name || "Logo"}
