@@ -51,6 +51,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [loading, navigate, path, status]);
 
+  const blockProtectedContent =
+    path !== "/login" &&
+    status.mode === "supabase" &&
+    (status.state === "loading" || loading || status.state === "logged_out");
+
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar desktop */}
@@ -94,6 +99,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <span className="hidden sm:inline">Local</span>
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
               </>
+            ) : status.state === "loading" ? (
+              <>
+                <span className="hidden sm:inline">Conectando…</span>
+                <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
+              </>
             ) : status.state === "logged_in" ? (
               <>
                 <span className="hidden sm:inline">Online</span>
@@ -124,7 +134,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </header>
-        <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">{children}</main>
+        <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+          {blockProtectedContent ? (
+            <div className="min-h-[60vh] flex items-center justify-center text-sm text-muted-foreground">
+              Carregando…
+            </div>
+          ) : (
+            children
+          )}
+        </main>
       </div>
     </div>
   );

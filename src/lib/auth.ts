@@ -4,6 +4,7 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
 
 export type AuthStatus =
   | { mode: "local" }
+  | { mode: "supabase"; state: "loading"; email: null }
   | { mode: "supabase"; state: "logged_out"; email: null }
   | { mode: "supabase"; state: "logged_in"; email: string };
 
@@ -55,11 +56,13 @@ export function useAuthStatus(): {
   }, [supabase]);
 
   const configured = isSupabaseConfigured();
-  const status: AuthStatus = !configured || !supabase
+  const status: AuthStatus = !configured
     ? { mode: "local" }
-    : session?.user?.email
-      ? { mode: "supabase", state: "logged_in", email: session.user.email }
-      : { mode: "supabase", state: "logged_out", email: null };
+    : !supabase
+      ? { mode: "supabase", state: "loading", email: null }
+      : session?.user?.email
+        ? { mode: "supabase", state: "logged_in", email: session.user.email }
+        : { mode: "supabase", state: "logged_out", email: null };
 
   return {
     status,
