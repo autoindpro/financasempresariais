@@ -56,7 +56,7 @@ function DrePage() {
         title="DRE Gerencial"
         description="Demonstração do Resultado do Exercício com análise vertical e horizontal."
         actions={
-          <>
+          <div className="flex gap-2 flex-wrap print:hidden">
             <input
               type="month"
               value={competence}
@@ -66,11 +66,11 @@ function DrePage() {
             <Button variant="secondary" onClick={() => window.print()}>
               <Download className="h-4 w-4 inline mr-1" /> Exportar
             </Button>
-          </>
+          </div>
         }
       />
 
-      <div className="rounded-2xl bg-card border shadow-[var(--shadow-card)] overflow-hidden">
+      <div className="rounded-2xl bg-card border shadow-[var(--shadow-card)] overflow-hidden print-avoid-break">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b">
@@ -201,6 +201,7 @@ function DrePage() {
         >
           <SimpleTable
             columns={["Competência", "Grupo", "Subgrupo", "Conta", "Tipo", "Data", "Frequência", "Valor"]}
+            tableClassName="print-gastos-table"
             rows={gastos.map((e) => {
               const acc = accountsByName.get(e.account.trim().toLowerCase());
               const tipo = acc?.type ?? "—";
@@ -246,7 +247,7 @@ function DetailSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl bg-card border shadow-[var(--shadow-card)] overflow-hidden">
+    <div className="rounded-2xl bg-card border shadow-[var(--shadow-card)] overflow-hidden print-avoid-break">
       <div className="flex items-center justify-between gap-3 px-5 py-4 border-b bg-muted/20">
         <div className="min-w-0">
           <div className="font-semibold font-display truncate">{title}</div>
@@ -255,7 +256,7 @@ function DetailSection({
         <button
           type="button"
           onClick={onToggle}
-          className="h-9 w-9 inline-flex items-center justify-center rounded-md border hover:bg-muted"
+          className="h-9 w-9 inline-flex items-center justify-center rounded-md border hover:bg-muted print:hidden"
           aria-label={open ? "Recolher" : "Expandir"}
           title={open ? "Recolher" : "Expandir"}
         >
@@ -271,14 +272,16 @@ function SimpleTable({
   columns,
   rows,
   emptyText,
+  tableClassName,
 }: {
   columns: string[];
   rows: Array<Array<React.ReactNode>>;
   emptyText: string;
+  tableClassName?: string;
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className={`w-full text-sm ${tableClassName ?? ""}`}>
         <thead className="text-xs text-muted-foreground">
           <tr className="border-b">
             {columns.map((c) => (
@@ -314,7 +317,7 @@ function SimpleTable({
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-2xl bg-card border p-5 shadow-[var(--shadow-card)]">
+    <div className="rounded-2xl bg-card border p-5 shadow-[var(--shadow-card)] print-avoid-break">
       <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">{label}</div>
       <div className="mt-2 text-xl font-semibold font-display tabular-nums">{value}</div>
       {hint && <div className="text-xs text-muted-foreground mt-1">{hint}</div>}

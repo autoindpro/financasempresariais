@@ -54,13 +54,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+      <aside className="hidden lg:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border print:hidden">
         <SidebarContent path={path} isAdmin={isAdmin} />
       </aside>
 
       {/* Sidebar mobile drawer */}
       {open && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+        <div className="lg:hidden fixed inset-0 z-50 flex print:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
           <aside className="relative w-64 bg-sidebar text-sidebar-foreground flex flex-col">
             <SidebarContent path={path} isAdmin={isAdmin} onNavigate={() => setOpen(false)} />
@@ -69,7 +69,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b bg-card/80 backdrop-blur-md sticky top-0 z-30 flex items-center px-4 lg:px-8 gap-4">
+        <header className="h-16 border-b bg-card/80 backdrop-blur-md sticky top-0 z-30 flex items-center px-4 lg:px-8 gap-4 print:hidden">
           <button
             className="lg:hidden p-2 -ml-2 rounded-md hover:bg-muted"
             onClick={() => setOpen(true)}

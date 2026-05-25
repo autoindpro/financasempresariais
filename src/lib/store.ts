@@ -131,9 +131,32 @@ interface State {
 
 const defaultAccounts: Account[] = [
   { id: uid(), name: "Receita de Vendas", group: "Receita", subgroup: "Operacional", type: "Receita", active: true, impactsDre: true },
-  { id: uid(), name: "Simples Nacional", group: "Deduções", subgroup: "Impostos", type: "Gasto", active: true, impactsDre: true },
-  { id: uid(), name: "ICMS", group: "Deduções", subgroup: "Impostos", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Cashback", group: "Deduções", subgroup: "Deduções Comerciais", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Comissões", group: "Deduções", subgroup: "Deduções Comerciais", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Descontos", group: "Deduções", subgroup: "Deduções Comerciais", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Devoluções", group: "Deduções", subgroup: "Deduções Comerciais", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Reembolsos", group: "Deduções", subgroup: "Deduções Comerciais", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "COFINS", group: "Deduções", subgroup: "Impostos", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "ICMS", group: "Deduções", subgroup: "Impostos", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "ISS", group: "Deduções", subgroup: "Impostos", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "PIS", group: "Deduções", subgroup: "Impostos", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Simples Nacional", group: "Deduções", subgroup: "Impostos", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Apps", group: "Deduções", subgroup: "Taxas Comerciais", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Gateways", group: "Deduções", subgroup: "Taxas Comerciais", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Maquininha", group: "Deduções", subgroup: "Taxas Comerciais", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Marketplace", group: "Deduções", subgroup: "Taxas Comerciais", type: "Deduções", active: true, impactsDre: true },
   { id: uid(), name: "Taxas de Maquininha", group: "Deduções", subgroup: "Taxas Comerciais", type: "Deduções", active: true, impactsDre: true },
+  { id: uid(), name: "Juros de Empréstimos", group: "Financeiro", subgroup: "Encargos Financeiros", type: "Financeiro", active: true, impactsDre: true },
+  { id: uid(), name: "Juros de Financiamentos", group: "Financeiro", subgroup: "Encargos Financeiros", type: "Financeiro", active: true, impactsDre: true },
+  { id: uid(), name: "Juros de Parcelamentos", group: "Financeiro", subgroup: "Encargos Financeiros", type: "Financeiro", active: true, impactsDre: true },
+  { id: uid(), name: "Descontos Financeiros Obtidos", group: "Financeiro", subgroup: "Receitas Financeiras", type: "Financeiro", active: true, impactsDre: true },
+  { id: uid(), name: "Juros Recebidos", group: "Financeiro", subgroup: "Receitas Financeiras", type: "Financeiro", active: true, impactsDre: true },
+  { id: uid(), name: "Rendimentos de Aplicações", group: "Financeiro", subgroup: "Receitas Financeiras", type: "Financeiro", active: true, impactsDre: true },
+  { id: uid(), name: "Tarifas Bancárias", group: "Financeiro", subgroup: "Tarifas Bancárias", type: "Financeiro", active: true, impactsDre: true },
+  { id: uid(), name: "Marketing Digital", group: "Marketing", subgroup: "Estratégia Digital", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Social Mídia", group: "Marketing", subgroup: "Gestão de Redes Sociais", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Tráfego Pago", group: "Marketing", subgroup: "Mídia Paga", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Material de Escritório", group: "Administrativo", subgroup: "Suprimentos Administrativos", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Salários", group: "Pessoal", subgroup: "Folha", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "FGTS", group: "Pessoal", subgroup: "Encargos", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "INSS", group: "Pessoal", subgroup: "Encargos", type: "Gasto", active: true, impactsDre: true },
@@ -146,12 +169,17 @@ const defaultAccounts: Account[] = [
   { id: uid(), name: "Bonificação", group: "Pessoal", subgroup: "Benefícios", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Auxílio Creche", group: "Pessoal", subgroup: "Benefícios", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Auxílio Material Escolar", group: "Pessoal", subgroup: "Benefícios", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Bolsa de Estudos", group: "Pessoal", subgroup: "Benefícios", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Plano de Saúde", group: "Pessoal", subgroup: "Benefícios", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Treinamentos", group: "Pessoal", subgroup: "Capacitação", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Aluguel", group: "Ocupação", subgroup: "Imóvel", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "IPTU", group: "Ocupação", subgroup: "Imóvel", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Bombeiros", group: "Ocupação", subgroup: "Imóvel", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Segurança Privada", group: "Ocupação", subgroup: "Imóvel", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Seguros", group: "Ocupação", subgroup: "Imóvel", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Taxa de Condomínio", group: "Ocupação", subgroup: "Imóvel", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Cartão de Crédito", group: "Ocupação", subgroup: "Imóvel", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Financiamento (Imóvel)", group: "Ocupação", subgroup: "Imóvel", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Energia Elétrica", group: "Ocupação", subgroup: "Utilidades", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Água e Esgoto", group: "Ocupação", subgroup: "Utilidades", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Gás", group: "Ocupação", subgroup: "Utilidades", type: "Gasto", active: true, impactsDre: true },
@@ -163,22 +191,19 @@ const defaultAccounts: Account[] = [
   { id: uid(), name: "Uber", group: "Ocupação", subgroup: "Deslocamento", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Combustível", group: "Ocupação", subgroup: "Deslocamento", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Estacionamento", group: "Ocupação", subgroup: "Deslocamento", type: "Gasto", active: true, impactsDre: true },
-  { id: uid(), name: "Material de Escritório", group: "Administrativo", subgroup: "Suprimentos Administrativos", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Correios", group: "Serviços de Terceiros", subgroup: "Administrativo", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Cartório", group: "Serviços de Terceiros", subgroup: "Administrativo", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Consultoria", group: "Serviços de Terceiros", subgroup: "Consultoria Especializada", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Contabilidade", group: "Serviços de Terceiros", subgroup: "Serviços Contábeis", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Manutenção de Equipamentos", group: "Serviços de Terceiros", subgroup: "Manutenção", type: "Gasto", active: true, impactsDre: true },
-  { id: uid(), name: "Marketing Digital", group: "Marketing", subgroup: "Estratégia Digital", type: "Gasto", active: true, impactsDre: true },
-  { id: uid(), name: "Tráfego Pago", group: "Marketing", subgroup: "Mídia Paga", type: "Gasto", active: true, impactsDre: true },
-  { id: uid(), name: "Social Mídia", group: "Marketing", subgroup: "Gestão de Redes Sociais", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Softwares", group: "Tecnologia", subgroup: "Assinaturas", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Inteligência Artificial", group: "Tecnologia", subgroup: "Assinaturas", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Informes Contábeis", group: "Tecnologia", subgroup: "Assinaturas", type: "Gasto", active: true, impactsDre: true },
   { id: uid(), name: "Site (Hospedagem/Domínio)", group: "Tecnologia", subgroup: "Infraestrutura Web", type: "Gasto", active: true, impactsDre: true },
-  { id: uid(), name: "Juros de Empréstimos", group: "Financeiro", subgroup: "Encargos Financeiros", type: "Financeiro", active: true, impactsDre: true },
-  { id: uid(), name: "Juros de Parcelamentos", group: "Financeiro", subgroup: "Encargos Financeiros", type: "Financeiro", active: true, impactsDre: true },
-  { id: uid(), name: "Juros de Financiamentos", group: "Financeiro", subgroup: "Financeiro", type: "Financeiro", active: true, impactsDre: true },
-  { id: uid(), name: "Tarifas Bancárias", group: "Financeiro", subgroup: "Tarifas Bancárias", type: "Financeiro", active: true, impactsDre: true },
+  { id: uid(), name: "IPVA", group: "Ocupação", subgroup: "Impostos e Taxas", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Seguro de Veículos", group: "Ocupação", subgroup: "Seguros", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Financiamento (Veículo)", group: "Ocupação", subgroup: "Veículo", type: "Gasto", active: true, impactsDre: true },
+  { id: uid(), name: "Multas", group: "Ocupação", subgroup: "Veículo", type: "Gasto", active: true, impactsDre: true },
 ];
 
 const defaultOptions: OptionLists = {
@@ -243,10 +268,71 @@ export const useStore = create<State>()(
     }),
     {
       name: "dre-app-store",
-      version: 4,
+      version: 5,
       migrate: (persisted: any) => {
         if (!persisted) return persisted;
-        persisted.accounts = defaultAccounts;
+        const norm = (v: unknown) =>
+          String(v ?? "")
+            .trim()
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+
+        const existingAccounts = Array.isArray(persisted.accounts) ? persisted.accounts : [];
+        const byName = new Map<string, any>();
+        for (const a of existingAccounts) {
+          const key = norm(a?.name);
+          if (!key) continue;
+          if (!byName.has(key)) byName.set(key, a);
+        }
+
+        const merged: Account[] = [];
+        const allowedTypes: ReadonlyArray<Account["type"]> = [
+          "Receita",
+          "Custo",
+          "Gasto",
+          "Financeiro",
+          "Investimento",
+          "Deduções",
+        ];
+        const normalizeType = (v: unknown): Account["type"] => {
+          const s = String(v ?? "");
+          return (allowedTypes as readonly string[]).includes(s) ? (s as Account["type"]) : "Gasto";
+        };
+        for (const a of existingAccounts) {
+          if (!a || typeof a !== "object") continue;
+          const name = String((a as any).name ?? "").trim();
+          if (!name) continue;
+          const key = norm(name);
+          if (byName.get(key) !== a) continue; // drop duplicates by name (keep first)
+
+          const next: Account = {
+            id: String((a as any).id ?? uid()),
+            name,
+            group: String((a as any).group ?? ""),
+            subgroup: String((a as any).subgroup ?? ""),
+            type: normalizeType((a as any).type),
+            active: Boolean((a as any).active),
+            impactsDre: Boolean((a as any).impactsDre ?? (a as any).impacts_dre ?? true),
+          };
+
+          // Fix legacy deduction accounts incorrectly typed as "Gasto"
+          if (next.type === "Gasto" && (key === "simples nacional" || key === "icms")) {
+            next.type = "Deduções";
+          }
+
+          merged.push(next);
+        }
+
+        const existingNames = new Set(merged.map((a) => norm(a.name)));
+        for (const d of defaultAccounts) {
+          const key = norm(d.name);
+          if (!key || existingNames.has(key)) continue;
+          merged.push(d);
+          existingNames.add(key);
+        }
+
+        persisted.accounts = merged;
         persisted.deductions = (persisted.deductions ?? []).map((d: any) => ({
           group: d.group ?? "Deduções",
           subgroup: d.subgroup ?? d.type ?? "",

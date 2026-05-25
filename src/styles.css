@@ -143,3 +143,61 @@
     letter-spacing: -0.02em;
   }
 }
+
+@media print {
+  @page {
+    margin: 18mm 12mm 14mm 12mm;
+  }
+
+  html,
+  body {
+    overflow: visible !important;
+  }
+
+  /* Avoid printing scrollbar gutters/rails in PDF exports (Chrome/Edge). */
+  .overflow-auto,
+  .overflow-x-auto,
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  * {
+    scrollbar-width: none !important;
+  }
+
+  *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  tr,
+  td,
+  th {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* DRE > Gastos Operacionais — Lançamentos: hide columns only in print */
+  table.print-gastos-table th:nth-child(5),
+  table.print-gastos-table td:nth-child(5),
+  table.print-gastos-table th:nth-child(6),
+  table.print-gastos-table td:nth-child(6),
+  table.print-gastos-table th:nth-child(7),
+  table.print-gastos-table td:nth-child(7) {
+    display: none !important;
+  }
+}
