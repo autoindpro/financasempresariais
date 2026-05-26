@@ -200,4 +200,9 @@
   table.print-gastos-table td:nth-child(7) {
     display: none !important;
   }
+
+  /* DRE > Receita Bruta — Lançamentos: keep more columns without cutting */
+  table.print-receitas-table {
+    font-size: 10px;
+  }
 }

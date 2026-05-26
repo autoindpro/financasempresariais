@@ -43,7 +43,11 @@ export interface Revenue {
   competence: string; // YYYY-MM
   amount: number;
   type: string;
+  kind: string;
   channel: string;
+  productOrService: string;
+  frequency: "Mensal" | "Trimestral" | "Anual" | "Eventual";
+  impactsDre: boolean;
   notes?: string;
 }
 
@@ -87,6 +91,8 @@ export interface Expense {
 
 interface OptionLists {
   revenueTypes: string[];
+  revenueKinds: string[];
+  revenueProducts: string[];
   channels: string[];
   deductionTypes: string[];
   deductionAccounts: string[];
@@ -207,8 +213,38 @@ const defaultAccounts: Account[] = [
 ];
 
 const defaultOptions: OptionLists = {
-  revenueTypes: ["Venda de Mercadorias", "Venda de Produtos", "Prestação de Serviços", "Receita Mista"],
-  channels: ["Loja Física", "Delivery", "Marketplace", "Online", "Outros"],
+  revenueTypes: [
+    "Prestação de Serviços",
+    "Venda de Produtos",
+    "Venda de Equipamentos",
+    "Venda de Máquinas",
+    "Venda de Veículos",
+    "Aporte de Sócios",
+    "Liberação de Empréstimo",
+    "Resgate de Aplicações",
+    "Entrada por Transferência",
+    "Ajuste de Saldo",
+    "Nota de Crédito",
+  ],
+  revenueKinds: [
+    "Receita Operacional",
+    "Receita Financeira",
+    "Receita Não Operacional",
+    "Entrada de Financiamento",
+    "Ajuste Financeiro",
+  ],
+  revenueProducts: [],
+  channels: [
+    "Assessoria",
+    "Contabilidade",
+    "Consultoria",
+    "Delivery",
+    "Loja Física",
+    "Marketplace",
+    "Online",
+    "Treinamento",
+    "Outros",
+  ],
   deductionTypes: ["Impostos", "Taxas Comerciais", "Deduções Comerciais"],
   deductionAccounts: ["Simples Nacional", "ICMS", "ISS", "PIS", "COFINS", "Maquininha", "Apps", "Gateways", "Marketplace", "Devoluções", "Reembolsos", "Cashback", "Descontos", "Comissões"],
   expenseGroups: ["Pessoal", "Ocupação", "Serviços Terceiros", "Marketing", "Financeiros", "Administrativos", "Tecnologia", "Outros"],
@@ -250,7 +286,22 @@ export const useStore = create<State>()(
       addOption: (key, value) =>
         set((s) => {
           if (s.options[key].includes(value)) return s;
-          return { options: { ...s.options, [key]: [...s.options[key], value] } };
+          const next = [...s.options[key], value];
+          const sortAlpha = (arr: string[]) => arr.sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+          const sortAlphaWithOutrosLast = (arr: string[]) => {
+            const norm = (v: string) => v.trim().toLowerCase();
+            const others = arr.filter((x) => norm(x) === "outros");
+            const rest = arr.filter((x) => norm(x) !== "outros");
+            sortAlpha(rest);
+            return [...rest, ...others];
+          };
+
+          if (key === "revenueProducts" || key === "revenueTypes") {
+            sortAlpha(next);
+          } else if (key === "channels") {
+            return { options: { ...s.options, [key]: sortAlphaWithOutrosLast(next) } };
+          }
+          return { options: { ...s.options, [key]: next } };
         }),
       setOnboardingCompleted: (v) => set({ onboardingCompleted: v }),
       reset: () =>
@@ -268,7 +319,7 @@ export const useStore = create<State>()(
     }),
     {
       name: "dre-app-store",
-      version: 5,
+      version: 21,
       migrate: (persisted: any) => {
         if (!persisted) return persisted;
         const norm = (v: unknown) =>
@@ -333,6 +384,56 @@ export const useStore = create<State>()(
         }
 
         persisted.accounts = merged;
+
+        const sortAlpha = (arr: string[]) => arr.sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+        const sortAlphaWithOutrosLast = (arr: string[]) => {
+          const norm = (v: string) => v.trim().toLowerCase();
+          const others = arr.filter((x) => norm(x) === "outros");
+          const rest = arr.filter((x) => norm(x) !== "outros");
+          sortAlpha(rest);
+          return [...rest, ...others];
+        };
+        const unique = (arr: string[]) => Array.from(new Set(arr.map((v) => v.trim()).filter(Boolean)));
+
+        const existingOptions = persisted.options && typeof persisted.options === "object" ? persisted.options : {};
+        const existingRevenueProducts = Array.isArray(existingOptions.revenueProducts)
+          ? existingOptions.revenueProducts.map((v: any) => String(v ?? "").trim()).filter(Boolean)
+          : [];
+        const existingRevenueTypes = Array.isArray(existingOptions.revenueTypes)
+          ? existingOptions.revenueTypes.map((v: any) => String(v ?? "").trim()).filter(Boolean)
+          : [];
+        const existingChannels = Array.isArray(existingOptions.channels)
+          ? existingOptions.channels.map((v: any) => String(v ?? "").trim()).filter(Boolean)
+          : [];
+
+        const revenueProducts = sortAlpha(unique(existingRevenueProducts));
+        const revenueTypes = sortAlpha(unique([...defaultOptions.revenueTypes, ...existingRevenueTypes]));
+        const channels = sortAlphaWithOutrosLast(unique([...defaultOptions.channels, ...existingChannels]));
+
+        persisted.options = {
+          ...defaultOptions,
+          ...existingOptions,
+          revenueTypes,
+          revenueKinds: [...defaultOptions.revenueKinds],
+          channels,
+          revenueProducts,
+        };
+
+        persisted.revenues = (persisted.revenues ?? []).map((r: any) => ({
+          id: r?.id ?? uid(),
+          competence: r?.competence ?? "",
+          amount: Number(r?.amount ?? 0),
+          type: r?.type ?? "",
+          kind: r?.kind ?? "",
+          channel: r?.channel ?? "",
+          productOrService: r?.productOrService ?? r?.product_or_service ?? "",
+          frequency: (["Mensal", "Trimestral", "Anual", "Eventual"] as const).includes(r?.frequency)
+            ? r.frequency
+            : "Mensal",
+          impactsDre: typeof r?.impactsDre === "boolean" ? r.impactsDre : typeof r?.impacts_dre === "boolean" ? r.impacts_dre : true,
+          notes: r?.notes,
+        }));
+
         persisted.deductions = (persisted.deductions ?? []).map((d: any) => ({
           group: d.group ?? "Deduções",
           subgroup: d.subgroup ?? d.type ?? "",

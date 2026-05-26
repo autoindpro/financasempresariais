@@ -78,7 +78,10 @@ export function buildDre(opts: {
   competence?: string; // YYYY-MM, optional filter
 }): { lines: DreLine[]; receitaBruta: number; receitaLiquida: number; lucroBruto: number; ebitda: number; lucroLiquido: number; cmvTotal: number; gastosTotal: number; deducoesTotal: number; folhaTotal: number } {
   const f = (c: string) => !opts.competence || c === opts.competence;
-  const receitaBruta = opts.revenues.filter((r) => f(r.competence)).reduce((s, r) => s + r.amount, 0);
+  const receitaBruta = opts.revenues
+    .filter((r) => f(r.competence))
+    .filter((r) => (r as any).impactsDre !== false)
+    .reduce((s, r) => s + r.amount, 0);
   const deducoesTotal = opts.deductions.filter((d) => f(d.competence)).reduce((s, d) => s + d.amount, 0);
   const cmvTotal = opts.cmv.filter((c) => f(c.competence)).reduce((s, c) => s + c.amount, 0);
   const expensesTotal = opts.expenses.filter((e) => f(e.competence)).reduce((s, e) => s + e.amount, 0);

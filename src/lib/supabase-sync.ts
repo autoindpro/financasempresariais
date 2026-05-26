@@ -44,7 +44,11 @@ type RevenueRow = {
   competence: string;
   amount: number;
   type: string | null;
+  revenue_kind: string | null;
   channel: string | null;
+  product_or_service: string | null;
+  frequency: string | null;
+  impacts_dre: boolean | null;
   notes: string | null;
 };
 
@@ -149,7 +153,14 @@ function toRevenue(row: RevenueRow): Revenue {
     competence: row.competence,
     amount: Number(row.amount ?? 0),
     type: row.type ?? "",
+    kind: row.revenue_kind ?? "",
     channel: row.channel ?? "",
+    productOrService: row.product_or_service ?? "",
+    frequency:
+      row.frequency === "Trimestral" || row.frequency === "Anual" || row.frequency === "Eventual"
+        ? (row.frequency as any)
+        : "Mensal",
+    impactsDre: row.impacts_dre ?? true,
     notes: row.notes ?? undefined,
   };
 }
@@ -241,7 +252,11 @@ function fromRevenue(companyId: string, r: Revenue): RevenueRow {
     competence: r.competence,
     amount: r.amount,
     type: r.type || null,
+    revenue_kind: r.kind || null,
     channel: r.channel || null,
+    product_or_service: r.productOrService || null,
+    frequency: r.frequency || "Mensal",
+    impacts_dre: r.impactsDre ?? true,
     notes: r.notes || null,
   };
 }

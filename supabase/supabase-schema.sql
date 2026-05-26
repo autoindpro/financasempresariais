@@ -130,7 +130,11 @@ create table public.revenues (
   competence char(7) not null, -- 'YYYY-MM'
   amount numeric(14,2) not null,
   type text,
+  revenue_kind text,
   channel text,
+  product_or_service text,
+  frequency expense_frequency not null default 'Mensal',
+  impacts_dre boolean not null default true,
   notes text,
   created_at timestamptz default now()
 );

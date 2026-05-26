@@ -124,13 +124,28 @@ function DrePage() {
           onToggle={() => setExpanded((x) => ({ ...x, receitas: !x.receitas }))}
         >
           <SimpleTable
-            columns={["Competência", "Tipo", "Canal", "Valor", "Observações"]}
+            columns={[
+              "Competência",
+              "Tipo de Receita",
+              "Categoria da Receita",
+              "Centro de Receita",
+              "Produto / Serviço",
+              "Frequência",
+              "Impacta DRE",
+              "Valor",
+              "Observações",
+            ]}
+            tableClassName="print-receitas-table"
             rows={receitas.map((r) => {
               const cls = "text-success";
               return [
                 r.competence,
+                (r as any).kind ?? "",
                 r.type,
                 r.channel,
+                (r as any).productOrService ?? "",
+                (r as any).frequency ?? "Mensal",
+                (r as any).impactsDre === false ? "Não" : "Sim",
                 <span className={`tabular-nums font-medium ${cls}`}>{`+ ${fmt(r.amount)}`}</span>,
                 r.notes ? (
                   <div
@@ -302,7 +317,7 @@ function SimpleTable({
             rows.map((r, idx) => (
               <tr key={idx} className="border-b last:border-0">
                 {r.map((cell, i) => (
-                  <td key={i} className="py-2 pr-3 whitespace-nowrap">
+                  <td key={i} className="py-2 pr-3 whitespace-nowrap print:whitespace-normal align-top">
                     {cell}
                   </td>
                 ))}
