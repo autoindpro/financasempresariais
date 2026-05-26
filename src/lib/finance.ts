@@ -82,6 +82,10 @@ export function buildDre(opts: {
     .filter((r) => f(r.competence))
     .filter((r) => (r as any).impactsDre !== false)
     .reduce((s, r) => s + r.amount, 0);
+  const receitasForaDre = opts.revenues
+    .filter((r) => f(r.competence))
+    .filter((r) => (r as any).impactsDre === false)
+    .reduce((s, r) => s + r.amount, 0);
   const deducoesTotal = opts.deductions.filter((d) => f(d.competence)).reduce((s, d) => s + d.amount, 0);
   const cmvTotal = opts.cmv.filter((c) => f(c.competence)).reduce((s, c) => s + c.amount, 0);
   const expensesTotal = opts.expenses.filter((e) => f(e.competence)).reduce((s, e) => s + e.amount, 0);
@@ -117,7 +121,8 @@ export function buildDre(opts: {
     .reduce((s, e) => s + e.amount, 0);
 
   // Resultado Financeiro = Receitas Financeiras - Despesas Financeiras
-  const resultadoFinanceiro = financeiroReceitas - financeiroDespesas;
+  // + receitasForaDre: Receitas com "Impacta DRE" desmarcado entram aqui
+  const resultadoFinanceiro = financeiroReceitas - financeiroDespesas + receitasForaDre;
   const lucroLiquido = ebitda + resultadoFinanceiro;
 
   const pct = (v: number) => (receitaLiquida ? v / receitaLiquida : 0);

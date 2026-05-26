@@ -17,6 +17,7 @@ function DrePage() {
   const [competence, setCompetence] = useState(currentCompetence());
   const [expanded, setExpanded] = useState({
     receitas: true,
+    receitasForaDre: true,
     deducoes: true,
     cmv: true,
     gastos: true,
@@ -29,7 +30,14 @@ function DrePage() {
     return buildDre({ ...s, competence: prev });
   }, [s, competence]);
 
-  const receitas = useMemo(() => s.revenues.filter((r) => r.competence === competence), [s.revenues, competence]);
+  const receitasDre = useMemo(
+    () => s.revenues.filter((r) => r.competence === competence).filter((r) => (r as any).impactsDre !== false),
+    [s.revenues, competence],
+  );
+  const receitasForaDre = useMemo(
+    () => s.revenues.filter((r) => r.competence === competence).filter((r) => (r as any).impactsDre === false),
+    [s.revenues, competence],
+  );
   const deducoes = useMemo(() => s.deductions.filter((d) => d.competence === competence), [s.deductions, competence]);
   const cmv = useMemo(() => s.cmv.filter((c) => c.competence === competence), [s.cmv, competence]);
   const gastos = useMemo(() => s.expenses.filter((e) => e.competence === competence), [s.expenses, competence]);
@@ -119,7 +127,7 @@ function DrePage() {
       <div className="mt-6 space-y-4">
         <DetailSection
           title="Receita Bruta — Lançamentos"
-          subtitle={`${receitas.length} lançamento(s) · Total ${fmt(receitas.reduce((sum, r) => sum + r.amount, 0))}`}
+          subtitle={`${receitasDre.length} lançamento(s) · Total ${fmt(receitasDre.reduce((sum, r) => sum + r.amount, 0))}`}
           open={expanded.receitas}
           onToggle={() => setExpanded((x) => ({ ...x, receitas: !x.receitas }))}
         >
@@ -131,12 +139,11 @@ function DrePage() {
               "Centro de Receita",
               "Produto / Serviço",
               "Frequência",
-              "Impacta DRE",
               "Valor",
               "Observações",
             ]}
             tableClassName="print-receitas-table"
-            rows={receitas.map((r) => {
+            rows={receitasDre.map((r) => {
               const cls = "text-success";
               return [
                 r.competence,
@@ -145,7 +152,6 @@ function DrePage() {
                 r.channel,
                 (r as any).productOrService ?? "",
                 (r as any).frequency ?? "Mensal",
-                (r as any).impactsDre === false ? "Não" : "Sim",
                 <span className={`tabular-nums font-medium ${cls}`}>{`+ ${fmt(r.amount)}`}</span>,
                 r.notes ? (
                   <div
@@ -160,6 +166,50 @@ function DrePage() {
               ];
             })}
             emptyText="Nenhuma receita lançada neste mês."
+          />
+        </DetailSection>
+
+        <DetailSection
+          title="Resultado Financeiro — Receitas (fora da DRE)"
+          subtitle={`${receitasForaDre.length} lançamento(s) · Total ${fmt(receitasForaDre.reduce((sum, r) => sum + r.amount, 0))}`}
+          open={expanded.receitasForaDre}
+          onToggle={() => setExpanded((x) => ({ ...x, receitasForaDre: !x.receitasForaDre }))}
+        >
+          <SimpleTable
+            columns={[
+              "Competência",
+              "Tipo de Receita",
+              "Categoria da Receita",
+              "Centro de Receita",
+              "Produto / Serviço",
+              "Frequência",
+              "Valor",
+              "Observações",
+            ]}
+            tableClassName="print-receitas-table"
+            rows={receitasForaDre.map((r) => {
+              const cls = "text-success";
+              return [
+                r.competence,
+                (r as any).kind ?? "",
+                r.type,
+                r.channel,
+                (r as any).productOrService ?? "",
+                (r as any).frequency ?? "Mensal",
+                <span className={`tabular-nums font-medium ${cls}`}>{`+ ${fmt(r.amount)}`}</span>,
+                r.notes ? (
+                  <div
+                    className="max-w-[520px] whitespace-pre-line break-words overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]"
+                    title={r.notes}
+                  >
+                    {r.notes}
+                  </div>
+                ) : (
+                  ""
+                ),
+              ];
+            })}
+            emptyText="Nenhuma receita fora da DRE lançada neste mês."
           />
         </DetailSection>
 

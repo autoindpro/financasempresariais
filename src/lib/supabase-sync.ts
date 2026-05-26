@@ -376,44 +376,47 @@ export async function pullAllCompanyData(client: SupabaseClient, companyId: stri
   cmv: CmvEntry[];
   expenses: Expense[];
 }> {
-  const [companyRes, employeesRes, accountsRes, revenuesRes, deductionsRes, cmvRes] = await Promise.all([
-    client.from("companies").select("id,name,cnpj,address,logo_url").eq("id", companyId).maybeSingle(),
-    client.from("employees").select("*").eq("company_id", companyId),
-    client.from("chart_of_accounts").select("*").eq("company_id", companyId),
-    client.from("revenues").select("*").eq("company_id", companyId),
-    client.from("deductions").select("*").eq("company_id", companyId),
-    client.from("cmv_cpv_csp").select("*").eq("company_id", companyId),
+  const companyRes = await client.from("companies").select("id,name,cnpj,address,logo_url").eq("id", companyId).maybeSingle();
+
+  // Be generous: paginate tables to avoid truncation when the dataset grows.
+  // Supabase/PostgREST commonly caps responses (e.g. 1000 rows) unless you page with range().
+  async function pullAllRows(table: string, orderColumn: string = "id"): Promise<any[]> {
+    const out: any[] = [];
+    const pageSize = 1000;
+    for (let offset = 0; offset < 200000; offset += pageSize) {
+      const res = await client
+        .from(table)
+        .select("*")
+        .eq("company_id", companyId)
+        .order(orderColumn as any, { ascending: true })
+        .range(offset, offset + pageSize - 1);
+      if (res.error) throw res.error;
+      const rows = res.data ?? [];
+      out.push(...rows);
+      if (rows.length < pageSize) break;
+    }
+    return out;
+  }
+
+  const [employeesRows, accountsRows, revenuesRows, deductionsRows, cmvRows, expensesRows] = await Promise.all([
+    pullAllRows("employees"),
+    pullAllRows("chart_of_accounts"),
+    pullAllRows("revenues"),
+    pullAllRows("deductions"),
+    pullAllRows("cmv_cpv_csp"),
+    pullAllRows("operational_expenses", "created_at"),
   ]);
 
-  const expenses: any[] = [];
-  // Be generous: paginate operational expenses to avoid truncation when the dataset grows.
-  // PostgREST uses range-based pagination. We stop when a page returns fewer rows than pageSize.
-  const pageSize = 1000;
-  for (let offset = 0; offset < 50000; offset += pageSize) {
-    const res = await client
-      .from("operational_expenses")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: true })
-      .range(offset, offset + pageSize - 1);
-    if (res.error) throw res.error;
-    const rows = res.data ?? [];
-    expenses.push(...rows);
-    if (rows.length < pageSize) break;
-  }
-
-  for (const res of [companyRes, employeesRes, accountsRes, revenuesRes, deductionsRes, cmvRes]) {
-    if (res.error) throw res.error;
-  }
+  if (companyRes.error) throw companyRes.error;
 
   return {
     company: companyRes.data ? toCompany(companyRes.data as CompanyRow) : null,
-    employees: (employeesRes.data ?? []).map((r) => toEmployee(r as EmployeeRow)),
-    accounts: (accountsRes.data ?? []).map((r) => toAccount(r as CoaRow)),
-    revenues: (revenuesRes.data ?? []).map((r) => toRevenue(r as RevenueRow)),
-    deductions: (deductionsRes.data ?? []).map((r) => toDeduction(r as DeductionRow)),
-    cmv: (cmvRes.data ?? []).map((r) => toCmv(r as CmvRow)),
-    expenses: (expenses ?? []).map((r) => toExpense(r as ExpenseRow)),
+    employees: (employeesRows ?? []).map((r) => toEmployee(r as EmployeeRow)),
+    accounts: (accountsRows ?? []).map((r) => toAccount(r as CoaRow)),
+    revenues: (revenuesRows ?? []).map((r) => toRevenue(r as RevenueRow)),
+    deductions: (deductionsRows ?? []).map((r) => toDeduction(r as DeductionRow)),
+    cmv: (cmvRows ?? []).map((r) => toCmv(r as CmvRow)),
+    expenses: (expensesRows ?? []).map((r) => toExpense(r as ExpenseRow)),
   };
 }
 

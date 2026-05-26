@@ -120,6 +120,7 @@ create table public.chart_of_accounts (
   type account_type not null,
   active boolean not null default true,
   impacts_dre boolean not null default true,
+  created_by uuid references auth.users(id) default auth.uid(),
   created_at timestamptz default now()
 );
 
@@ -223,10 +224,12 @@ create table public.option_values (
   company_id uuid not null references public.companies(id) on delete cascade,
   key text not null,
   value text not null,
+  created_by uuid references auth.users(id) default auth.uid(),
   created_at timestamptz default now(),
   unique (company_id, key, value)
 );
 create index on public.option_values (company_id, key);
+create index on public.option_values (company_id, key, created_by);
 
 -- ----------------------- CASHFLOW / BANKING -----------------------
 create table public.bank_accounts (
@@ -395,13 +398,30 @@ create policy "emp delete" on public.employees
   for delete using (public.can_company_write(company_id));
 
 create policy "coa read" on public.chart_of_accounts
-  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+  for select using (
+    public.is_platform_admin(auth.uid())
+    or public.can_company_admin(company_id)
+    or (
+      public.has_company_access(auth.uid(), company_id)
+      and (created_by is null or created_by = auth.uid())
+    )
+  );
 create policy "coa write" on public.chart_of_accounts
-  for insert with check (public.can_company_write(company_id));
+  for insert with check (public.can_company_write(company_id) and created_by = auth.uid());
 create policy "coa update" on public.chart_of_accounts
-  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+  for update using (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  )
+  with check (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  );
 create policy "coa delete" on public.chart_of_accounts
-  for delete using (public.can_company_write(company_id));
+  for delete using (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  );
 
 create policy "dre read" on public.dre_results
   for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
@@ -449,10 +469,27 @@ create policy "cashflow delete" on public.cashflow_entries
   for delete using (public.can_company_write(company_id));
 
 create policy "options read" on public.option_values
-  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+  for select using (
+    public.is_platform_admin(auth.uid())
+    or public.can_company_admin(company_id)
+    or (
+      public.has_company_access(auth.uid(), company_id)
+      and (created_by is null or created_by = auth.uid())
+    )
+  );
 create policy "options write" on public.option_values
-  for insert with check (public.can_company_write(company_id));
+  for insert with check (public.can_company_write(company_id) and created_by = auth.uid());
 create policy "options update" on public.option_values
-  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+  for update using (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  )
+  with check (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  );
 create policy "options delete" on public.option_values
-  for delete using (public.can_company_write(company_id));
+  for delete using (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  );

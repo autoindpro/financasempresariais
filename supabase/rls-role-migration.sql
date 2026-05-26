@@ -156,13 +156,30 @@ create policy "emp delete" on public.employees
 drop policy if exists "coa access" on public.chart_of_accounts;
 drop policy if exists "coa platform admin" on public.chart_of_accounts;
 create policy "coa read" on public.chart_of_accounts
-  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+  for select using (
+    public.is_platform_admin(auth.uid())
+    or public.can_company_admin(company_id)
+    or (
+      public.has_company_access(auth.uid(), company_id)
+      and (created_by is null or created_by = auth.uid())
+    )
+  );
 create policy "coa write" on public.chart_of_accounts
-  for insert with check (public.can_company_write(company_id));
+  for insert with check (public.can_company_write(company_id) and created_by = auth.uid());
 create policy "coa update" on public.chart_of_accounts
-  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+  for update using (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  )
+  with check (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  );
 create policy "coa delete" on public.chart_of_accounts
-  for delete using (public.can_company_write(company_id));
+  for delete using (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  );
 
 -- DRE results
 drop policy if exists "dre access" on public.dre_results;
@@ -228,11 +245,27 @@ create policy "cashflow delete" on public.cashflow_entries
 drop policy if exists "options access" on public.option_values;
 drop policy if exists "options platform admin" on public.option_values;
 create policy "options read" on public.option_values
-  for select using (public.is_platform_admin(auth.uid()) or public.has_company_access(auth.uid(), company_id));
+  for select using (
+    public.is_platform_admin(auth.uid())
+    or public.can_company_admin(company_id)
+    or (
+      public.has_company_access(auth.uid(), company_id)
+      and (created_by is null or created_by = auth.uid())
+    )
+  );
 create policy "options write" on public.option_values
-  for insert with check (public.can_company_write(company_id));
+  for insert with check (public.can_company_write(company_id) and created_by = auth.uid());
 create policy "options update" on public.option_values
-  for update using (public.can_company_write(company_id)) with check (public.can_company_write(company_id));
+  for update using (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  )
+  with check (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  );
 create policy "options delete" on public.option_values
-  for delete using (public.can_company_write(company_id));
-
+  for delete using (
+    public.can_company_write(company_id)
+    and (public.can_company_admin(company_id) or created_by = auth.uid())
+  );
