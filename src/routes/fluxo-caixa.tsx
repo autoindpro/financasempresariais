@@ -22,6 +22,24 @@ type ImportRow = {
   fitId: string;
 };
 
+type EntryKind = "payable" | "receivable";
+type EntryStatus = "open" | "paid" | "canceled";
+type EntryFilterKey = "kind" | "status" | "description" | "counterparty";
+type CashflowEntry = {
+  id: string;
+  kind: EntryKind;
+  status: EntryStatus;
+  dueDate: string;
+  paidAt: string | null;
+  competence: string;
+  description: string;
+  counterparty: string | null;
+  amount: number;
+  recurrent: boolean;
+  frequency: "Mensal" | "Trimestral" | "Anual" | "Eventual";
+  notes: string | null;
+};
+
 function FluxoCaixaPage() {
   const [tab, setTab] = useState<"import" | "contas" | "pagar-receber">("import");
   const [companyId, setCompanyId] = useState<string>(() => {
@@ -59,25 +77,11 @@ function FluxoCaixaPage() {
 
   const [entriesStatus, setEntriesStatus] = useState<string>("");
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [entryTypeFilters, setEntryTypeFilters] = useState<Array<"payable" | "receivable">>([]);
+  const [entryTypeFilters, setEntryTypeFilters] = useState<EntryKind[]>([]);
+  const [entryStatusFilters, setEntryStatusFilters] = useState<Array<"open" | "paid">>([]);
   const [entryDescriptionFilters, setEntryDescriptionFilters] = useState<string[]>([]);
   const [entryCounterpartyFilters, setEntryCounterpartyFilters] = useState<string[]>([]);
-  const [entries, setEntries] = useState<
-    Array<{
-      id: string;
-      kind: "payable" | "receivable";
-      status: "open" | "paid" | "canceled";
-      dueDate: string;
-      paidAt: string | null;
-      competence: string;
-      description: string;
-      counterparty: string | null;
-      amount: number;
-      recurrent: boolean;
-      frequency: "Mensal" | "Trimestral" | "Anual" | "Eventual";
-      notes: string | null;
-    }>
-  >([]);
+  const [entries, setEntries] = useState<CashflowEntry[]>([]);
   const [newEntry, setNewEntry] = useState({
     kind: "payable" as "payable" | "receivable",
     competence: new Date().toISOString().slice(0, 7),
@@ -138,42 +142,83 @@ function FluxoCaixaPage() {
     return dateIso >= currentDashRange.from && dateIso <= currentDashRange.to;
   };
 
-  const descriptionOptions = useMemo(() => {
-    const base = entries.filter((e) => isDateInDashPeriod(e.dueDate));
-    const set = new Set<string>();
-    for (const e of base) {
-      const d = (e.description ?? "").trim();
-      if (d) set.add(d);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [entries, currentDashRange]);
-
-  const counterpartyOptions = useMemo(() => {
-    const base = entries.filter((e) => isDateInDashPeriod(e.dueDate));
-    const set = new Set<string>();
-    for (const e of base) {
-      const c = (e.counterparty ?? "").trim();
-      if (c) set.add(c);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [entries, currentDashRange]);
-
-  const filteredEntries = useMemo(() => {
+  const filterEntries = (skip?: EntryFilterKey): CashflowEntry[] => {
     let out = entries.filter((e) => isDateInDashPeriod(e.dueDate));
-    if (entryTypeFilters.length) {
+    if (skip !== "kind" && entryTypeFilters.length) {
       const set = new Set(entryTypeFilters);
       out = out.filter((e) => set.has(e.kind));
     }
-    if (entryDescriptionFilters.length) {
+    if (skip !== "status" && entryStatusFilters.length) {
+      const set = new Set(entryStatusFilters);
+      out = out.filter((e) => set.has(e.status as "open" | "paid"));
+    }
+    if (skip !== "description" && entryDescriptionFilters.length) {
       const set = new Set(entryDescriptionFilters);
       out = out.filter((e) => set.has(e.description));
     }
-    if (entryCounterpartyFilters.length) {
+    if (skip !== "counterparty" && entryCounterpartyFilters.length) {
       const set = new Set(entryCounterpartyFilters);
       out = out.filter((e) => set.has(e.counterparty ?? ""));
     }
     return out;
+  };
+
+  const typeOptions = useMemo(() => {
+    const set = new Set(filterEntries("kind").map((e) => e.kind));
+    return Array.from(set);
+  }, [entries, entryCounterpartyFilters, entryDescriptionFilters, entryStatusFilters, currentDashRange]);
+
+  const statusOptions = useMemo(() => {
+    const set = new Set(filterEntries("status").map((e) => e.status));
+    return Array.from(set).filter((status): status is "open" | "paid" => status === "open" || status === "paid");
   }, [entries, entryCounterpartyFilters, entryDescriptionFilters, entryTypeFilters, currentDashRange]);
+
+  const descriptionOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of filterEntries("description")) {
+      const d = (e.description ?? "").trim();
+      if (d) set.add(d);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [entries, entryCounterpartyFilters, entryStatusFilters, entryTypeFilters, currentDashRange]);
+
+  const counterpartyOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of filterEntries("counterparty")) {
+      const c = (e.counterparty ?? "").trim();
+      if (c) set.add(c);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [entries, entryDescriptionFilters, entryStatusFilters, entryTypeFilters, currentDashRange]);
+
+  const filteredEntries = useMemo(() => {
+    return filterEntries();
+  }, [entries, entryCounterpartyFilters, entryDescriptionFilters, entryStatusFilters, entryTypeFilters, currentDashRange]);
+
+  const keepAvailableFilters = <T,>(prev: T[], available: Set<T>): T[] => {
+    const next = prev.filter((value) => available.has(value));
+    return next.length === prev.length ? prev : next;
+  };
+
+  useEffect(() => {
+    const nextOptions = new Set(typeOptions);
+    setEntryTypeFilters((prev) => keepAvailableFilters(prev, nextOptions));
+  }, [typeOptions]);
+
+  useEffect(() => {
+    const nextOptions = new Set(statusOptions);
+    setEntryStatusFilters((prev) => keepAvailableFilters(prev, nextOptions));
+  }, [statusOptions]);
+
+  useEffect(() => {
+    const nextOptions = new Set(descriptionOptions);
+    setEntryDescriptionFilters((prev) => keepAvailableFilters(prev, nextOptions));
+  }, [descriptionOptions]);
+
+  useEffect(() => {
+    const nextOptions = new Set(counterpartyOptions);
+    setEntryCounterpartyFilters((prev) => keepAvailableFilters(prev, nextOptions));
+  }, [counterpartyOptions]);
 
   const dashFiltered = useMemo(() => {
     if (!dash) return null;
@@ -987,7 +1032,7 @@ function FluxoCaixaPage() {
               <Button variant="secondary" onClick={() => void loadEntries()}>Atualizar lista</Button>
               {entriesStatus ? <div className="text-sm text-muted-foreground">{entriesStatus}</div> : null}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <details className="rounded-xl border bg-background p-3">
                 <summary className="cursor-pointer text-sm font-medium select-none">
                   Tipo {entryTypeFilters.length ? `(${entryTypeFilters.length})` : ""}
@@ -997,22 +1042,58 @@ function FluxoCaixaPage() {
                     <input type="checkbox" checked={entryTypeFilters.length === 0} onChange={() => setEntryTypeFilters([])} />
                     Todos
                   </label>
+                  {typeOptions.includes("payable") ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={entryTypeFilters.includes("payable")}
+                        onChange={() => setEntryTypeFilters((s) => toggleInList(s, "payable"))}
+                      />
+                      A pagar
+                    </label>
+                  ) : null}
+                  {typeOptions.includes("receivable") ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={entryTypeFilters.includes("receivable")}
+                        onChange={() => setEntryTypeFilters((s) => toggleInList(s, "receivable"))}
+                      />
+                      A receber
+                    </label>
+                  ) : null}
+                </div>
+              </details>
+
+              <details className="rounded-xl border bg-background p-3">
+                <summary className="cursor-pointer text-sm font-medium select-none">
+                  Status {entryStatusFilters.length ? `(${entryStatusFilters.length})` : ""}
+                </summary>
+                <div className="mt-3 space-y-2 max-h-64 overflow-auto pr-1">
                   <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={entryTypeFilters.includes("payable")}
-                      onChange={() => setEntryTypeFilters((s) => toggleInList(s, "payable"))}
-                    />
-                    A pagar
+                    <input type="checkbox" checked={entryStatusFilters.length === 0} onChange={() => setEntryStatusFilters([])} />
+                    Todos
                   </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={entryTypeFilters.includes("receivable")}
-                      onChange={() => setEntryTypeFilters((s) => toggleInList(s, "receivable"))}
-                    />
-                    A receber
-                  </label>
+                  {statusOptions.includes("open") ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={entryStatusFilters.includes("open")}
+                        onChange={() => setEntryStatusFilters((s) => toggleInList(s, "open"))}
+                      />
+                      Aberto
+                    </label>
+                  ) : null}
+                  {statusOptions.includes("paid") ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={entryStatusFilters.includes("paid")}
+                        onChange={() => setEntryStatusFilters((s) => toggleInList(s, "paid"))}
+                      />
+                      Pago
+                    </label>
+                  ) : null}
                 </div>
               </details>
 
